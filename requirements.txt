@@ -1,0 +1,6 @@
+colorama
+pandas
+numpy
+scipy
+matplotlib
+openpyxl
