@@ -1,16 +1,14 @@
 import os
-from types import MappingProxyType  # неизменяемый словарь
 
 from colorama import Fore
 import numpy as np
 from numpy import array, nan, isnan, sqrt, arange, linspace
 import pandas as pd
-# from pint import UnitRegistry  # СИ
 from scipy import interpolate
 import matplotlib.pyplot as plt
 
 # Список использованной литературы
-REFERENCES = MappingProxyType({
+REFERENCES = {
     1: '''Марочник сталей и сплавов.
     2-е изд., исправл. и доп. / Зубченко А.С., Колосков М.М., Каширский Ю.В. и др. Под ред. А.С. Зубченко.
     М.: Машиностроение, 2003. 784 с.''',
@@ -18,7 +16,7 @@ REFERENCES = MappingProxyType({
     Справочник / Б.Н. Арзамасов, Т.В. Соловьева, С.А. Герасимов и др.;
     Под ред. Б.Н. Арзамасова, Т.В. Соловьевой.
     - М.: Изд-во МГТУ им Н.Э. Баумана, 2006. с.: ил.''',
-})
+}
 
 T0 = 273.15  # абсолютный температурный ноль
 M = 10 ** 6  # приставка Мега
@@ -29,7 +27,77 @@ hardness = pd.read_excel(os.path.join(HERE, 'hardness.xlsx')).drop(['d10mm'], ax
 
 class Substance:
     """Вещество"""
-    pass
+
+    __slots__ = ('name', 'parameters')
+
+    def __init__(self, name: str, **parameters) -> None:
+        self.name: str = name
+        self.parameters: dict = parameters
+
+    def validate(self, key: str, value: int | float | tuple | list) -> tuple[str, int | float | tuple]:
+        assert isinstance(key, str), f'{key} must be str'
+        if key == 'name':
+            assert isinstance(value, str), f'name {key} must be a str'
+        else:
+            if isinstance(value, (int, float)):
+                pass
+            elif isinstance(value, (tuple, list)):
+                for v in value:
+                    assert isinstance(v, (int, float))
+                value = tuple(value)
+            else:
+                raise TypeError(f'value parameter {key} must be int/float/tuple/list')
+        return key, value
+
+    def __setattr__(self, key: str, value):
+        if key == 'name':
+            key, value = self.validate(key, value)
+            object.__setattr__(self, key, value)
+        elif key == 'parameters':
+            assert isinstance(value, dict), 'parameters must be a dict'
+            if not hasattr(self, 'parameters'): object.__setattr__(self, key, dict())
+            for k, v in value.items():
+                k, v = self.validate(k, v)
+                self.parameters[k] = v
+        else:  # new parameter
+            key, value = self.validate(key, value)
+            self.parameters[key] = value
+
+    def __delattr__(self, key) -> None:
+        if key == 'name':
+            raise Exception('Deleting forbidden!')
+        elif key in self.parameters:
+            del self.parameters[key]
+
+    @staticmethod
+    def jung(**kwargs) -> float:
+        """Модуль Юнга I и II рода"""
+        mu = kwargs.pop('mu', None)
+        E = kwargs.pop('E', None)
+        G = kwargs.pop('G', None)
+        assert isinstance(mu, (float, int, np.number)) and 0 < mu
+        if isinstance(E, (float, int, np.number)):
+            assert 0 < E
+            return E / (2 * (mu + 1))
+        elif isinstance(G, (float, int, np.number)):
+            assert 0 < G
+            return 2 * G * (mu + 1)
+        else:
+            raise Exception('isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))')
+
+
+'''substance = Substance('temp', ro=8_600, T=(300, 400, 500, 600), P=[1, 2, 3, 4])
+print(f'{substance = }')
+print(f'{substance.name = } {substance.parameters = }')
+substance.name = 'Temp'
+print(f'{substance.name = } {substance.parameters = }')
+substance.k = 1.4
+print(f'{substance.name = } {substance.parameters = }')
+try:
+    del substance.name
+except Exception as e:
+    print(e)
+print(f'{substance.name = } {substance.parameters = }')'''
 
 
 class Material:
@@ -112,11 +180,6 @@ class Material:
     }
 
     @classmethod
-    def __version__(cls):
-        version = '4.0'
-        print(version)
-
-    @classmethod
     def help(cls):
         print(Fore.CYAN + 'Material parameters:' + Fore.RESET)
         print(Fore.RED + 'type value must be int, float, array with shape (-1,2) or callable(int | float)' + Fore.RESET)
@@ -175,10 +238,6 @@ class Material:
     def name(self, name: str) -> None:
         assert isinstance(name, str)
         self.__name = name
-
-    @name.deleter
-    def name(self) -> None:
-        raise
 
     @staticmethod
     def jung(**kwargs) -> float:
@@ -497,7 +556,6 @@ materials.append(Material('08Х15Н24В4ТР',
 
 def main():
     """Тестирование"""
-    Material.__version__()
     Material.help()
 
     material = Material('test',  # тестируемый материал
