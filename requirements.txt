@@ -1,6 +1,11 @@
 colorama
-pandas
+tqdm
 numpy
+pandas
+openpyxl
 scipy
 matplotlib
-openpyxl
+
+thermodynamics @ git+https://github.com/ParkhomenkoDV/thermodynamics.git@master
+
+pytest
