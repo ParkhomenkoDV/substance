@@ -1,13 +1,15 @@
 import os
+from copy import deepcopy
 
-from colorama import Fore
-import numpy as np
-from numpy import array, nan, isnan, sqrt, arange, linspace
-import pandas as pd
-from scipy import interpolate
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
+from colorama import Fore
+from decorators import ignore_extra_kwargs  # игнорирование лишних именных аргументов
+from numpy import arange, array, isnan, linspace, nan, sqrt
+from scipy import interpolate
 from thermodynamics import T0
+from thermodynamics import parameters as tdp  # termodynamic parameters
 
 # Список использованной литературы
 REFERENCES = {
@@ -20,7 +22,6 @@ REFERENCES = {
     - М.: Изд-во МГТУ им Н.Э. Баумана, 2006. с.: ил.""",
 }
 
-
 M = 10**6  # приставка Мега
 HERE = os.path.dirname(__file__)  # путь к текущему файлу
 
@@ -32,49 +33,124 @@ hardness = pd.read_excel(os.path.join(HERE, "hardness.xlsx")).drop(
 class Substance:
     """Вещество"""
 
-    __slots__ = ("name", "parameters")
+    __slots__ = (  # запрет других атрибутов + ускорение
+        "name",  # имя
+        "composition",  # химический состав
+        "parameters",  # параметры
+    )
 
-    def __init__(self, name: str, **parameters) -> None:
+    def __init__(
+        self, name: str, composition: dict[str, float] = None, parameters: dict = None
+    ) -> None:
+        """
+        Инициализация вещества.
+
+        Args:
+            name: Название вещества
+            composition: Химический состав (элемент: доля)
+            parameters: Физические параметры (название: значение/функция)
+        """
         self.name: str = name
-        self.parameters: dict = parameters
+        self.composition: dict = composition or {}
+        self.parameters: dict = parameters or {}
 
-    def validate(
-        self, key: str, value: int | float | tuple | list
-    ) -> tuple[str, int | float | tuple]:
-        assert isinstance(key, str), f"{key} must be str"
-        if key == "name":
-            assert isinstance(value, str), f"name {key} must be a str"
+    def __validate_attribute(
+        self, attribute: str, value: str | dict
+    ) -> tuple[str, str | dict]:
+        """Валидирование атрибутов"""
+        assert isinstance(attribute, str), TypeError(f"{attribute} must be str")
+        match attribute:
+            case "name":
+                assert isinstance(value, str), TypeError(f"{attribute} must be a str")
+                return attribute, value
+            case "composition":
+                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                return attribute, self.__validate_composition(value)
+            case "parameters":
+                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                validated = {}
+                for parameter, v in value.items():
+                    assert isinstance(parameter, str), f"{parameter} must be a str"
+                    validated[parameter] = self.__validate_parameter_value(parameter, v)
+                return attribute, validated
+            case _:
+                raise AttributeError(f"{attribute} not in {self.__slots__}")
+        return attribute, value
+
+    def __validate_composition(self, composition: dict) -> dict[str:float]:
+        for k, v in composition.items():
+            assert isinstance(k, str), TypeError("Composition keys must be strings")
+            assert isinstance(v, (int, float, np.number)), TypeError(
+                "Composition values must be numeric"
+            )
+        total = sum(composition.values())  # общая масса
+        return {k: v / total for k, v in composition.items()}
+
+    def __validate_parameter_value(self, name: str, value):
+        """Валидация значения параметра"""
+        if callable(value):
+            return ignore_extra_kwargs(value)
+        elif isinstance(value, (int, float, np.number)):
+            return ignore_extra_kwargs(lambda *_, **__: float(value))
         else:
-            if isinstance(value, (int, float)):
-                pass
-            elif isinstance(value, (tuple, list)):
-                for v in value:
-                    assert isinstance(v, (int, float))
-                value = tuple(value)
-            else:
-                raise TypeError(f"value parameter {key} must be int/float/tuple/list")
-        return key, value
+            raise TypeError(f"Parameter {name} value must be numeric or callable")
 
     def __setattr__(self, key: str, value):
-        if key == "name":
-            key, value = self.validate(key, value)
-            object.__setattr__(self, key, value)
-        elif key == "parameters":
-            assert isinstance(value, dict), "parameters must be a dict"
-            if not hasattr(self, "parameters"):
-                object.__setattr__(self, key, dict())
-            for k, v in value.items():
-                k, v = self.validate(k, v)
-                self.parameters[k] = v
-        else:  # new parameter
-            key, value = self.validate(key, value)
-            self.parameters[key] = value
+        key, value = self.__validate_attribute(key, value)
+        object.__setattr__(self, key, value)
 
     def __delattr__(self, key) -> None:
         if key == "name":
             raise Exception("Deleting forbidden!")
         elif key in self.parameters:
             del self.parameters[key]
+
+    def __getitem__(self, key):
+        return self.parameters.get(key, lambda *args, **kwargs: nan)
+
+    def __setitem__(self, key, value) -> None:
+        assert key not in self.parameters
+        _, value = self.__validate_attribute("parameters", value)
+        self.parameters[key] = value
+
+    def __delitem__(self, key) -> None:
+        del self.parameters[key]
+
+    def __deepcopy__(self, memo):
+        """
+        Создает глубокую копию объекта Substance.
+        Обрабатывает:
+        - Копирование строки name
+        - Рекурсивное копирование словарей composition и parameters
+        - Корректную обработку callable-объектов в parameters
+        """
+
+        new_obj = Substance.__new__(
+            Substance
+        )  # Создаем новый экземпляр без вызова __init__
+
+        # Копируем простые атрибуты
+        memo[id(self)] = (
+            new_obj  # Добавляем в memo для предотвращения циклических ссылок
+        )
+
+        # Глубокое копирование каждого атрибута
+        new_obj.name = deepcopy(self.name, memo)
+
+        # Особое внимание словарям
+        new_obj.composition = {
+            k: deepcopy(v, memo) for k, v in self.composition.items()
+        }
+
+        new_obj.parameters = {}
+        for k, v in self.parameters.items():
+            if callable(v):
+                # Для callable-объектов используем shallow copy
+                new_obj.parameters[k] = v
+            else:
+                new_obj.parameters[k] = deepcopy(v, memo)
+
+        return new_obj
 
     @staticmethod
     def jung(**kwargs) -> float:
@@ -93,20 +169,6 @@ class Substance:
             raise Exception(
                 "isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))"
             )
-
-
-"""substance = Substance('temp', ro=8_600, T=(300, 400, 500, 600), P=[1, 2, 3, 4])
-print(f'{substance = }')
-print(f'{substance.name = } {substance.parameters = }')
-substance.name = 'Temp'
-print(f'{substance.name = } {substance.parameters = }')
-substance.k = 1.4
-print(f'{substance.name = } {substance.parameters = }')
-try:
-    del substance.name
-except Exception as e:
-    print(e)
-print(f'{substance.name = } {substance.parameters = }')"""
 
 
 class Material:
@@ -1048,9 +1110,19 @@ def main():
 
 
 if __name__ == "__main__":
-    import cProfile
-
-    cProfile.run("main()", sort="cumtime")
+    s = Substance(
+        "air",
+        parameters={
+            "gas_const": 287,
+            tdp.k: 1.4,
+            tdp.Cp: lambda t: 300 + t,
+        },
+    )
+    print(s.parameters["gas_const"]())
+    print(s["gas_const"]())
+    print(s.parameters[tdp.k](p=12, z=1234.4))
+    print(s[tdp.Cp](t=3, p=101325))
+    print(s["None"]())
 
 
 '''
@@ -1218,73 +1290,3 @@ class Substance(dict):
 
         return result
 '''
-
-"""
-if __name__ == "__main__":
-    if 0:
-        print(Fore.YELLOW + f"testing {atmosphere_standard.__name__}" + Fore.RESET)
-        for H in (-8_000, -2_000, 0, 4_000, 11_000, 16_000, 32_000):
-            print(f"H = {H}: {atmosphere_standard(H)}")
-
-    if 1:
-        print(Fore.YELLOW + f"testing {Substance.__name__}" + Fore.RESET)
-        if 0:
-            s1 = Substance({"N2": 75.5})
-            s1.summary()
-            s2 = Substance({"O2": 23.15})
-            s2.summary()
-            s3 = Substance({"Ar": 1.292})
-            s3.summary()
-            s4 = Substance({"Ne": 0.0014})
-            s4.summary()
-            s5 = Substance({"H2": 0.0008})
-
-            s = s1 + s2 + s3 + s4 + s5
-            s.summary()
-
-            T = np.linspace(300, 600, 300 + 1)
-            plt.plot(T, [Cp("AIR", T=t) for t in T], color="red")
-            plt.plot(T, [s.Cp(T=float(t))[0] for t in T], color="blue")
-            plt.grid(True)
-            plt.xlabel("T [K]")
-            plt.ylabel("Cp [J/kg/K]")
-            plt.xlim(T[0], T[-1])
-            plt.ylim(1000, 1200)
-            plt.show()
-
-        if 1:
-            s = Substance(
-                {
-                    "N2": 0.755,
-                    "O2": 0.2315,
-                    "Ar": 0.01292,
-                    "Ne": 0.000014,
-                    "H2": 0.000008,
-                }
-            )
-            s.summary()
-
-            T = np.arange(300, 800, 1)
-            plt.plot(T, [Cp("AIR", T=t) for t in T], color="red")
-            plt.plot(T, [s.Cp(T=float(t))[0] for t in T], color="blue")
-            plt.grid(True)
-            plt.xlabel("T [K]")
-            plt.ylabel("Cp [J/kg/K]")
-            plt.xlim(T[0], T[-1])
-            plt.ylim(1000, 1200)
-            plt.show()
-
-        if 0:
-            s = Substance({"H2O": 11.25})
-            s.summary()
-
-            s = Substance({"CO2": 12})
-            s.summary()
-
-            print(dir(s))
-
-        if 0:
-            print(av(Cp, [400, 500], [10**5, 2 * 10**5]))
-            print(Cp("air", T=458))
-            print(Cp("air", T=458, P=2 * 10**5))
-"""
