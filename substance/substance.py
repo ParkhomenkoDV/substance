@@ -94,7 +94,7 @@ class Substance:
         else:
             raise TypeError(f"Parameter {name} value must be numeric or callable")
 
-    def __setattr__(self, key: str, value):
+    def __setattr__(self, key: str, value) -> None:
         value = self.__validate_attribute(key, value)
         object.__setattr__(self, key, value)
 
@@ -104,7 +104,7 @@ class Substance:
         elif key in self.parameters:
             del self.parameters[key]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> callable:
         return self.parameters.get(key, lambda *args, **kwargs: nan)
 
     def __setitem__(self, key, value) -> None:
@@ -157,22 +157,30 @@ class Substance:
         return Substance(self.name + other.name, composition=composition)
 
     @staticmethod
-    def jung(**kwargs) -> float:
+    def young_modulus(
+        poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None
+    ) -> float:
         """Модуль Юнга I и II рода"""
-        mu = kwargs.pop("mu", None)
-        E = kwargs.pop("E", None)
-        G = kwargs.pop("G", None)
-        assert isinstance(mu, (float, int, np.number)) and 0 < mu
-        if isinstance(E, (float, int, np.number)):
-            assert 0 < E
-            return E / (2 * (mu + 1))
-        elif isinstance(G, (float, int, np.number)):
-            assert 0 < G
-            return 2 * G * (mu + 1)
-        else:
-            raise Exception(
-                "isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))"
-            )
+        if not isinstance(poisson_ratio, (float, int, np.number)) or poisson_ratio <= 0:
+            raise ValueError("Poisson ratio must be positive number")
+
+        if elastic_modulus is not None:
+            if (
+                not isinstance(elastic_modulus, (float, int, np.number))
+                or elastic_modulus <= 0
+            ):
+                raise ValueError("Elastic modulus must be positive number")
+            return elastic_modulus / (2 * (poisson_ratio + 1))
+
+        if shear_modulus is not None:
+            if (
+                not isinstance(shear_modulus, (float, int, np.number))
+                or shear_modulus <= 0
+            ):
+                raise ValueError("Shear modulus must be positive number")
+            return 2 * shear_modulus * (poisson_ratio + 1)
+
+        raise ValueError("Either elastic_modulus or shear_modulus must be provided")
 
     @property
     def excess_oxidizing(self) -> float:

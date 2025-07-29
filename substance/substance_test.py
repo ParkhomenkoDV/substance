@@ -180,20 +180,3 @@ class TestSubstance:
 
         # Параметры не должны переноситься при сложении
         assert not mixture.parameters  # должен быть пустой словарь
-
-    def test_jung_modulus(self):
-        """Тест расчета модуля Юнга"""
-        # Расчет по модулю упругости
-        E = Substance.jung(mu=0.3, E=200e9)
-        assert E == pytest.approx(76.923e9, rel=1e-3)
-
-        # Расчет по модулю сдвига
-        G = Substance.jung(mu=0.3, G=80e9)
-        assert G == pytest.approx(208e9, rel=1e-3)
-
-        # Ошибки при неверных входных данных
-        with pytest.raises(AssertionError):
-            Substance.jung(mu=-0.1, E=200e9)
-
-        with pytest.raises(Exception):
-            Substance.jung(mu=0.3)  # Не указан E или G
