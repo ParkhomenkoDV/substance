@@ -126,7 +126,7 @@ class TestSubstance:
 
         mixture = water + salt
 
-        assert mixture.name == "WaterSalt"
+        assert mixture.name == "Water+Salt"
         assert set(mixture.composition.keys()) == {"H", "O", "Na", "Cl"}
         assert mixture.composition["H"] == 2
         assert mixture.composition["O"] == 1
@@ -139,7 +139,7 @@ class TestSubstance:
 
         mixture = water1 + water2
 
-        assert mixture.name == "Water1Water2"
+        assert mixture.name == "Water1+Water2"
         assert mixture.composition["H"] == 3  # 2 + 1
         assert mixture.composition["O"] == 2  # 1 + 1
         assert mixture.composition["D"] == 1  # только из water2
@@ -150,7 +150,7 @@ class TestSubstance:
 
         mixture = water + empty
 
-        assert mixture.name == "Water"
+        assert mixture.name == "Water+"
         assert mixture.composition == water.composition
 
         # Тест попытки сложения с не-Substance объектом
@@ -169,8 +169,8 @@ class TestSubstance:
         # Составы должны быть одинаковыми независимо от порядка
         assert mix1.composition == mix2.composition
         # Но имена будут разными
-        assert mix1.name == "WaterSalt"
-        assert mix2.name == "SaltWater"
+        assert mix1.name == "Water+Salt"
+        assert mix2.name == "Salt+Water"
 
         # Тест сохранения параметров при сложении
         water = Substance("Water", parameters={"temp": 20})

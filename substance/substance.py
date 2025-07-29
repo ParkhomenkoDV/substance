@@ -154,7 +154,7 @@ class Substance:
                 composition[element] = other.composition[element]
             else:
                 composition[element] += other.composition[element]
-        return Substance(self.name + other.name, composition=composition)
+        return Substance(self.name + "+" + other.name, composition=composition)
 
     @staticmethod
     def young_modulus(
