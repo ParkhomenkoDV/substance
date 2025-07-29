@@ -54,39 +54,39 @@ class Substance:
         self.composition: dict = composition or {}
         self.parameters: dict = parameters or {}
 
-    def __validate_attribute(
-        self, attribute: str, value: str | dict
-    ) -> tuple[str, str | dict]:
+    def __validate_attribute(self, attribute: str, value: str | dict) -> str | dict:
         """Валидирование атрибутов"""
         assert isinstance(attribute, str), TypeError(f"{attribute} must be str")
         match attribute:
             case "name":
                 assert isinstance(value, str), TypeError(f"{attribute} must be a str")
-                return attribute, value
+                return value
             case "composition":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
-                return attribute, self.__validate_composition(value)
+                return self.__validate_composition(value)
             case "parameters":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
                 validated = {}
                 for parameter, v in value.items():
                     assert isinstance(parameter, str), f"{parameter} must be a str"
-                    validated[parameter] = self.__validate_parameter_value(parameter, v)
-                return attribute, validated
+                    validated[parameter] = self.__validate_parameter(parameter, v)
+                return validated
             case _:
                 raise AttributeError(f"{attribute} not in {self.__slots__}")
-        return attribute, value
 
     def __validate_composition(self, composition: dict) -> dict[str:float]:
-        for k, v in composition.items():
-            assert isinstance(k, str), TypeError("Composition keys must be strings")
-            assert isinstance(v, (int, float, np.number)), TypeError(
-                "Composition values must be numeric"
+        for element, fraction in composition.items():
+            assert isinstance(element, str), TypeError(
+                "Composition elements must be strings"
             )
+            assert isinstance(fraction, (int, float, np.number)), TypeError(
+                "Composition fractions must be numeric"
+            )
+            assert fraction >= 0, ValueError("Composition values must be >= 0")
         total = sum(composition.values())  # общая масса
         return {k: v / total for k, v in composition.items()}
 
-    def __validate_parameter_value(self, name: str, value):
+    def __validate_parameter(self, name: str, value) -> callable:
         """Валидация значения параметра"""
         if callable(value):
             return ignore_extra_kwargs(value)
@@ -96,7 +96,7 @@ class Substance:
             raise TypeError(f"Parameter {name} value must be numeric or callable")
 
     def __setattr__(self, key: str, value):
-        key, value = self.__validate_attribute(key, value)
+        value = self.__validate_attribute(key, value)
         object.__setattr__(self, key, value)
 
     def __delattr__(self, key) -> None:
@@ -109,8 +109,7 @@ class Substance:
         return self.parameters.get(key, lambda *args, **kwargs: nan)
 
     def __setitem__(self, key, value) -> None:
-        assert key not in self.parameters
-        _, value = self.__validate_attribute("parameters", value)
+        value = self.__validate_parameter(key, value)
         self.parameters[key] = value
 
     def __delitem__(self, key) -> None:
@@ -125,14 +124,10 @@ class Substance:
         - Корректную обработку callable-объектов в parameters
         """
 
-        new_obj = Substance.__new__(
-            Substance
-        )  # Создаем новый экземпляр без вызова __init__
+        new_obj = Substance.__new__(Substance)  # новый экземпляр без вызова __init__
 
-        # Копируем простые атрибуты
-        memo[id(self)] = (
-            new_obj  # Добавляем в memo для предотвращения циклических ссылок
-        )
+        # Копируем простые атрибуты в memo для предотвращения циклических ссылок
+        memo[id(self)] = new_obj
 
         # Глубокое копирование каждого атрибута
         new_obj.name = deepcopy(self.name, memo)
@@ -145,12 +140,25 @@ class Substance:
         new_obj.parameters = {}
         for k, v in self.parameters.items():
             if callable(v):
-                # Для callable-объектов используем shallow copy
                 new_obj.parameters[k] = v
             else:
                 new_obj.parameters[k] = deepcopy(v, memo)
 
         return new_obj
+
+    '''
+    def __add__(self, other):
+    """Смешение веществ"""
+    assert isinstance(other, Substance)
+    composition = self.composition.copy()
+    for el in other.composition.keys():
+        if el not in composition:
+            composition[el] = other.composition[el]
+        else:
+            composition[el] += other.composition[el]
+
+    return Substance(composition)
+    '''
 
     @staticmethod
     def jung(**kwargs) -> float:
@@ -169,6 +177,14 @@ class Substance:
             raise Exception(
                 "isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))"
             )
+
+    @property
+    def excess_oxidizing(self) -> float:
+        """Коэффициент избытка окислителя"""
+        oxidizing = self.composition.get("O", 0)
+        total = sum(self.composition.values())
+        total = nan if total == 0 else total
+        return oxidizing / total
 
 
 class Material:
@@ -1107,186 +1123,3 @@ def main():
     for column in hardness.columns:
         for h in range(0, 1_000 + 1, 10):
             print(f'"{column}": {h}, {Material.hardness(column, h)}')
-
-
-if __name__ == "__main__":
-    s = Substance(
-        "air",
-        parameters={
-            "gas_const": 287,
-            tdp.k: 1.4,
-            tdp.Cp: lambda t: 300 + t,
-        },
-    )
-    print(s.parameters["gas_const"]())
-    print(s["gas_const"]())
-    print(s.parameters[tdp.k](p=12, z=1234.4))
-    print(s[tdp.Cp](t=3, p=101325))
-    print(s["None"]())
-
-
-'''
-class Substance(dict):
-    """Химическое вещество"""
-
-    def __init__(self, composition: dict[str:float]) -> None:
-        assert type(composition) is dict
-        elements, fractions = map(tuple, (composition.keys(), composition.values()))
-        assert all(map(lambda element: type(element) is str, elements))
-        assert all(map(lambda fraction: type(fraction) in (float, int), fractions))
-        assert all(map(lambda fraction: 0 <= fraction, fractions))
-        # сортировка по убыванию массовой доли элемента
-        composition = dict(
-            sorted(composition.items(), key=lambda item: item[1], reverse=True)
-        )
-        super(Substance, self).__init__(composition)
-
-    def __add__(self, other):
-        assert isinstance(other, Substance)
-        composition = self.composition.copy()
-        for el in other.composition.keys():
-            if el not in composition:
-                composition[el] = other.composition[el]
-            else:
-                composition[el] += other.composition[el]
-
-        return Substance(composition)
-
-    @staticmethod
-    def formula_to_dict(formula: str) -> dict[str:int]:
-        result = dict()
-
-        i = 0
-        while i < len(formula):
-            if i + 1 < len(formula) and formula[i + 1].islower():
-                atom = formula[i : i + 2]
-                i += 2
-            else:
-                atom = formula[i]
-                i += 1
-
-            count = 0
-            while i < len(formula) and formula[i].isdigit():
-                count = count * 10 + int(formula[i])
-                i += 1
-
-            if count == 0:
-                count = 1
-
-            if atom in result:
-                result[atom] += count
-            else:
-                result[atom] = count
-
-        return result
-
-    @property
-    def composition(self) -> dict[str:int]:
-        return dict(self)
-
-    @property
-    def mol_mass(self) -> tuple[float, str]:
-        """Молярная масса"""
-        if hasattr(self, "_Substance__mol_mass"):
-            return self.__mol_mass
-        m = sum(self.composition.values())
-        self.__mol_mass = 0
-
-        @lru_cache(maxsize=None)  # кэширование медленнее, если не применяется!
-        def get_element_mass(element: str):
-            return mendeleev.element(element).mass
-
-        for formula, fraction in self.composition.items():
-            formula_dict = Substance.formula_to_dict(formula)
-            for el, atoms in formula_dict.items():
-                self.__mol_mass += get_element_mass(el) * atoms * fraction
-
-        """for formula, fraction in self.composition.items():
-            for el, atoms in Substance.formula_to_dict(formula).items():
-                self.__mol_mass += mendeleev.element(el).mass * atoms * fraction"""
-
-        self.__mol_mass = self.__mol_mass / m / 1000, "kg/mol"
-        return self.__mol_mass
-
-    @property
-    def gas_const(self) -> tuple[float, str]:
-        """Газовая постоянная"""
-        if hasattr(self, "_Substance__gas_const"):
-            return self.__gas_const
-        self.__gas_const = GAS_CONST / self.mol_mass[0], "J/kg/K"
-        return self.__gas_const
-
-    def Cp(
-        self, T: float | int | list = nan, P: float | int = nan, epsrel=0.01
-    ) -> tuple[float, str]:
-        """Теплоемкость при постоянном давлении"""
-        if type(T) in (float, np.float64, int) and type(P) in (float, np.float64, int):
-            return sum(
-                [Cp(key, T=T, P=P) * value for key, value in self.items()]
-            ) / sum(self.values()), "J/kg/K"
-        elif type(T) is list and type(P) in (float, int):
-            assert len(T) == 2
-            assert all(map(lambda t: type(t) in (float, np.float64, int), T))
-            assert T[0] != T[1]
-            return integrate.quad(
-                lambda t: sum(
-                    [
-                        Cp(key, T=t, P=P) * value / sum(self.values())
-                        for key, value in self.items()
-                    ]
-                ),
-                T[0],
-                T[1],
-                epsrel=epsrel,
-            )[0] / (T[1] - T[0]), "J/kg/K"
-
-        elif type(T) in (float, int) and type(P) is list:
-            assert len(P) == 2
-            assert all(map(lambda p: type(p) in (float, int), P))
-            assert P[0] != P[1]
-            return integrate.quad(
-                lambda p: sum(
-                    [
-                        Cp(key, T=T, P=p) * value / sum(self.values())
-                        for key, value in self.items()
-                    ]
-                ),
-                P[0],
-                P[1],
-                epsrel=epsrel,
-            )[0] / (P[1] - P[0]), "J/kg/K"
-        elif type(T) is list and type(P) is list:
-            assert len(T) == 2 and len(P) == 2
-            assert all(map(lambda t: type(t) in (float, int), T)) and all(
-                map(lambda p: type(p) in (float, int), P)
-            )
-            assert T[0] != T[1] and P[0] != P[1]
-            return integrate.dblquad(
-                lambda t, p: 1,
-                0,
-                1,
-                lambda xu: Ydown(xu),
-                lambda xd: Yup(xd),
-                epsrel=epsrel,
-            )[0], "J/kg/K"
-        else:
-            raise ValueError
-
-    @property
-    def excess_oxidizing(self) -> float:
-        """Коэффициент избытка окислителя"""
-        return 0
-
-    @decorators.timeit()
-    def summary(self, show=True) -> dict:
-        result = {
-            "composition": self.composition,
-            "mol_mass": self.mol_mass,
-            "gas_const": self.gas_const,
-        }
-        if show:
-            for key, value in result.items():
-                print(f"{key}: {value}")
-
-        return result
-'''
