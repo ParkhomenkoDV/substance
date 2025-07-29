@@ -83,8 +83,7 @@ class Substance:
                 "Composition fractions must be numeric"
             )
             assert fraction >= 0, ValueError("Composition values must be >= 0")
-        total = sum(composition.values())  # общая масса
-        return {k: v / total for k, v in composition.items()}
+        return composition
 
     def __validate_parameter(self, name: str, value) -> callable:
         """Валидация значения параметра"""
@@ -146,19 +145,16 @@ class Substance:
 
         return new_obj
 
-    '''
     def __add__(self, other):
-    """Смешение веществ"""
-    assert isinstance(other, Substance)
-    composition = self.composition.copy()
-    for el in other.composition.keys():
-        if el not in composition:
-            composition[el] = other.composition[el]
-        else:
-            composition[el] += other.composition[el]
-
-    return Substance(composition)
-    '''
+        """Смешение веществ"""
+        assert isinstance(other, Substance), TypeError(f"{other} must be a Substance")
+        composition = self.composition.copy()
+        for element in other.composition.keys():
+            if element not in composition:
+                composition[element] = other.composition[element]
+            else:
+                composition[element] += other.composition[element]
+        return Substance(self.name + other.name, composition=composition)
 
     @staticmethod
     def jung(**kwargs) -> float:
@@ -181,7 +177,11 @@ class Substance:
     @property
     def excess_oxidizing(self) -> float:
         """Коэффициент избытка окислителя"""
-        oxidizing = self.composition.get("O", 0)
+        oxidizing = sum(
+            fraction
+            for element, fraction in self.composition.items()
+            if element.startswith("O")
+        )
         total = sum(self.composition.values())
         total = nan if total == 0 else total
         return oxidizing / total

@@ -19,16 +19,9 @@ class TestSubstance:
 
         # С параметрами
         s = Substance("Air", {"N": 0.78, "O": 0.21}, {"density": 1.2})
-        assert s.composition["N"] == pytest.approx(0.78 / (0.78 + 0.21), rel=0.000_1)
+        assert s.composition["N"] == 0.78
+        assert s.composition["O"] == 0.21
         assert s["density"]() == 1.2
-
-    def test_composition_normalization(self):
-        """Тест нормализации состава"""
-        rel = 0.000_1
-        s = Substance("Test", {"A": 1, "B": 1, "C": 3})
-        assert s.composition["A"] == pytest.approx(1 / 5, rel=rel)
-        assert s.composition["B"] == pytest.approx(1 / 5, rel=rel)
-        assert s.composition["C"] == pytest.approx(3 / 5, rel=rel)
 
     def test_parameter_handling(self):
         """Тест работы с параметрами"""
@@ -119,11 +112,74 @@ class TestSubstance:
 
         # Один элемент
         s = Substance("Test", {"A": 10})
-        assert s.composition["A"] == pytest.approx(1.0)
+        assert s.composition["A"] == 10
 
         # Отрицательные значения (должны вызывать ошибку)
         with pytest.raises((AssertionError, ValueError)):
             Substance("Test", {"A": -1})
+
+    def test_add(self):
+        """Тест сложения двух веществ"""
+        # Создаем тестовые вещества
+        water = Substance("Water", {"H": 2, "O": 1})
+        salt = Substance("Salt", {"Na": 1, "Cl": 1})
+
+        mixture = water + salt
+
+        assert mixture.name == "WaterSalt"
+        assert set(mixture.composition.keys()) == {"H", "O", "Na", "Cl"}
+        assert mixture.composition["H"] == 2
+        assert mixture.composition["O"] == 1
+        assert mixture.composition["Na"] == 1
+        assert mixture.composition["Cl"] == 1
+
+        # Тест смешения с общими элементами
+        water1 = Substance("Water1", {"H": 2, "O": 1})
+        water2 = Substance("Water2", {"H": 1, "O": 1, "D": 1})  # D - дейтерий
+
+        mixture = water1 + water2
+
+        assert mixture.name == "Water1Water2"
+        assert mixture.composition["H"] == 3  # 2 + 1
+        assert mixture.composition["O"] == 2  # 1 + 1
+        assert mixture.composition["D"] == 1  # только из water2
+
+        # Тест смешения с веществом без состава
+        water = Substance("Water", {"H": 2, "O": 1})
+        empty = Substance("")
+
+        mixture = water + empty
+
+        assert mixture.name == "Water"
+        assert mixture.composition == water.composition
+
+        # Тест попытки сложения с не-Substance объектом
+        water = Substance("Water")
+
+        with pytest.raises(AssertionError):
+            water + 123  # попытка сложить с числом
+
+        # Тест коммутативности сложения веществ
+        water = Substance("Water", {"H": 2, "O": 1})
+        salt = Substance("Salt", {"Na": 1, "Cl": 1})
+
+        mix1 = water + salt
+        mix2 = salt + water
+
+        # Составы должны быть одинаковыми независимо от порядка
+        assert mix1.composition == mix2.composition
+        # Но имена будут разными
+        assert mix1.name == "WaterSalt"
+        assert mix2.name == "SaltWater"
+
+        # Тест сохранения параметров при сложении
+        water = Substance("Water", parameters={"temp": 20})
+        salt = Substance("Salt", parameters={"mass": 10})
+
+        mixture = water + salt
+
+        # Параметры не должны переноситься при сложении
+        assert not mixture.parameters  # должен быть пустой словарь
 
     def test_jung_modulus(self):
         """Тест расчета модуля Юнга"""
