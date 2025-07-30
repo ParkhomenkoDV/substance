@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 from colorama import Fore
 from decorators import ignore_extra_kwargs  # игнорирование лишних именных аргументов
-from numpy import arange, array, isnan, linspace, nan, sqrt
+from mathematics import prefixes
+from numpy import arange, array, isnan, linspace, nan
 from scipy import interpolate
 from thermodynamics import T0
 from thermodynamics import parameters as tdp  # termodynamic parameters
@@ -22,7 +23,7 @@ REFERENCES = {
     - М.: Изд-во МГТУ им Н.Э. Баумана, 2006. с.: ил.""",
 }
 
-M = 10**6  # приставка Мега
+M = prefixes.mega.value
 HERE = os.path.dirname(__file__)  # путь к текущему файлу
 
 hardness = pd.read_excel(os.path.join(HERE, "hardness.xlsx")).drop(
@@ -37,10 +38,15 @@ class Substance:
         "name",  # имя
         "composition",  # химический состав
         "parameters",  # параметры
+        "functions",  # функции
     )
 
     def __init__(
-        self, name: str, composition: dict[str, float] = None, parameters: dict = None
+        self,
+        name: str,
+        composition: dict[str, float] = None,
+        parameters: dict = None,
+        functions: dict = None,
     ) -> None:
         """
         Инициализация вещества.
@@ -51,8 +57,9 @@ class Substance:
             parameters: Физические параметры (название: значение/функция)
         """
         self.name: str = name
-        self.composition: dict = composition or {}
-        self.parameters: dict = parameters or {}
+        self.composition: dict[str : float | int] = composition or {}
+        self.parameters: dict[str : float | int] = parameters or {}
+        self.functions: dict[str:callable] = functions or {}
 
     def __validate_attribute(self, attribute: str, value: str | dict) -> str | dict:
         """Валидирование атрибутов"""
@@ -66,11 +73,10 @@ class Substance:
                 return self.__validate_composition(value)
             case "parameters":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
-                validated = {}
-                for parameter, v in value.items():
-                    assert isinstance(parameter, str), f"{parameter} must be a str"
-                    validated[parameter] = self.__validate_parameter(parameter, v)
-                return validated
+                return {k: self.__validate_parameter(k, v) for k, v in value.items()}
+            case "functions":
+                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                return {k: self.__validate_function(k, v) for k, v in value.items()}
             case _:
                 raise AttributeError(f"{attribute} not in {self.__slots__}")
 
@@ -85,34 +91,26 @@ class Substance:
             assert fraction >= 0, ValueError("Composition values must be >= 0")
         return composition
 
-    def __validate_parameter(self, name: str, value) -> callable:
-        """Валидация значения параметра"""
-        if callable(value):
-            return ignore_extra_kwargs(value)
-        elif isinstance(value, (int, float, np.number)):
-            return ignore_extra_kwargs(lambda *_, **__: float(value))
-        else:
-            raise TypeError(f"Parameter {name} value must be numeric or callable")
+    def __validate_parameter(self, key: str, value: int | float) -> callable:
+        """Валидация параметров"""
+        assert isinstance(key, str), TypeError(f"{key} must be a str")
+        assert isinstance(value, (int, float, np.number)), TypeError(
+            f"Parameter {key} value must be numeric"
+        )
+        return value
+
+    def __validate_function(self, key: str, value: callable) -> callable:
+        """Валидация функций"""
+        assert isinstance(key, str), TypeError(f"{key} must be a str")
+        assert callable(value), TypeError(f"Function {key} value must be callable")
+        return ignore_extra_kwargs(value)
 
     def __setattr__(self, key: str, value) -> None:
         value = self.__validate_attribute(key, value)
         object.__setattr__(self, key, value)
 
     def __delattr__(self, key) -> None:
-        if key == "name":
-            raise Exception("Deleting forbidden!")
-        elif key in self.parameters:
-            del self.parameters[key]
-
-    def __getitem__(self, key) -> callable:
-        return self.parameters.get(key, lambda *args, **kwargs: nan)
-
-    def __setitem__(self, key, value) -> None:
-        value = self.__validate_parameter(key, value)
-        self.parameters[key] = value
-
-    def __delitem__(self, key) -> None:
-        del self.parameters[key]
+        raise Exception("Deleting forbidden!")
 
     def __deepcopy__(self, memo):
         """
@@ -136,25 +134,27 @@ class Substance:
             k: deepcopy(v, memo) for k, v in self.composition.items()
         }
 
-        new_obj.parameters = {}
-        for k, v in self.parameters.items():
-            if callable(v):
-                new_obj.parameters[k] = v
-            else:
-                new_obj.parameters[k] = deepcopy(v, memo)
+        new_obj.parameters = {k: deepcopy(v, memo) for k, v in self.parameters.items()}
+
+        new_obj.functions = {k: v for k, v in self.functions.items()}
 
         return new_obj
 
     def __add__(self, other):
         """Смешение веществ"""
         assert isinstance(other, Substance), TypeError(f"{other} must be a Substance")
-        composition = self.composition.copy()
+        composition = deepcopy(self.composition)
         for element in other.composition.keys():
             if element not in composition:
                 composition[element] = other.composition[element]
             else:
                 composition[element] += other.composition[element]
-        return Substance(self.name + "+" + other.name, composition=composition)
+        return Substance(
+            self.name + "+" + other.name,
+            composition=composition,
+            parameters={},  # TODO: параметры смешения!
+            functions={},
+        )
 
     @staticmethod
     def young_modulus(
