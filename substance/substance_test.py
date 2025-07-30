@@ -89,7 +89,10 @@ class TestSubstance:
     def test_deepcopy(self):
         """Тест глубокого копирования"""
         s1 = Substance(
-            "Water", composition={"H": 2, "O": 1}, parameters={"density": 1.0}
+            "Water",
+            composition={"H": 2, "O": 1},
+            parameters={"density": 1.0},
+            functions={"Cp": lambda T: 1000 + T},
         )
         s2 = deepcopy(s1)
 
@@ -101,6 +104,9 @@ class TestSubstance:
         # Проверка, что это действительно глубокая копия
         s1.composition["H"] = 3
         assert s2.composition["H"] == 2
+
+        # Проверка, что функции работают корректно
+        assert s1.functions["Cp"](T=1) == s2.functions["Cp"](T=1)
 
     def test_add(self):
         """Тест сложения веществ"""

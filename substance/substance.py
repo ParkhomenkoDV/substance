@@ -120,7 +120,6 @@ class Substance:
         - Рекурсивное копирование словарей composition и parameters
         - Корректную обработку callable-объектов в parameters
         """
-
         new_obj = Substance.__new__(Substance)  # новый экземпляр без вызова __init__
 
         # Копируем простые атрибуты в memo для предотвращения циклических ссылок
@@ -133,10 +132,10 @@ class Substance:
         new_obj.composition = {
             k: deepcopy(v, memo) for k, v in self.composition.items()
         }
-
         new_obj.parameters = {k: deepcopy(v, memo) for k, v in self.parameters.items()}
-
-        new_obj.functions = {k: v for k, v in self.functions.items()}
+        new_obj.functions = {}  # dict comprehension обернет декоратор декоратором еще раз!
+        for k, v in self.functions.items():
+            new_obj.functions[k] = v
 
         return new_obj
 
