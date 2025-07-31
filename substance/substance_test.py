@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from numpy import isnan
 
-from substance import Substance
+from substance import *
 
 
 class TestSubstance:
