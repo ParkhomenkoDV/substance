@@ -132,9 +132,7 @@ class Substance:
             k: deepcopy(v, memo) for k, v in self.composition.items()
         }
         new_obj.parameters = {k: deepcopy(v, memo) for k, v in self.parameters.items()}
-        new_obj.functions = {}  # dict comprehension обернет декоратор декоратором еще раз!
-        for k, v in self.functions.items():
-            new_obj.functions[k] = v
+        new_obj.functions = {k: v for k, v in self.functions.items()}
 
         return new_obj
 
