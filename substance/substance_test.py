@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from numpy import isnan
 
-from substance import *
+from substance import Substance
 
 
 class TestSubstance:
@@ -70,6 +70,8 @@ class TestSubstance:
 
     def test_functions_validation(self):
         """Тест валидации функций"""
+        # lambda
+        Substance("Water", functions={"lambda": lambda x: x**2})
         # Не-callable объект
         with pytest.raises((AssertionError, TypeError)):
             Substance("Water", functions={"calc": 123})

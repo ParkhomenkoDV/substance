@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from colorama import Fore
-from decorators import ignore_extra_kwargs  # игнорирование лишних именных аргументов
 from mathematics import prefixes
 from numpy import arange, array, isnan, linspace, nan
 from scipy import interpolate
@@ -103,7 +102,7 @@ class Substance:
         """Валидация функций"""
         assert isinstance(key, str), TypeError(f"{key} must be a str")
         assert callable(value), TypeError(f"Function {key} value must be callable")
-        return ignore_extra_kwargs(value)
+        return value
 
     def __setattr__(self, key: str, value) -> None:
         value = self.__validate_attribute(key, value)
