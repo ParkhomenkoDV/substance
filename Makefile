@@ -22,14 +22,13 @@ BLUE   = \033[0;34m
 RESET  = \033[0m
 
 # Targets
-.PHONY: help venv venv-activate install install-dev test lint format clean run
+.PHONY: help venv venv-activate install test lint format clean run
 
 help:
 	@echo "Available commands:"
 	@echo "  make venv           - Create virtual environment"
 	@echo "  make activate       - Activate virtual environment (prints command)"
 	@echo "  make install        - Install production dependencies"
-	@echo "  make install-dev    - Install development dependencies"
 	@echo "  make test           - Run tests"
 	@echo "  make lint           - Run linters (flake8, pylint)"
 	@echo "  make format         - Format code (black, isort)"
@@ -50,10 +49,6 @@ activate:
 install:
 	@echo "$(BLUE)Installing production dependencies...$(RESET)"
 	$(PIP_PATH) install --upgrade -r $(REQUIREMENTS)
-
-install-dev: install
-	@echo "$(BLUE)Installing development dependencies...$(RESET)"
-	$(PIP_PATH) install --upgrade -r $(DEV_REQUIREMENTS)
 	$(PIP_PATH) install --upgrade black flake8 pylint isort pytest 
 
 test:

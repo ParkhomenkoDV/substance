@@ -161,3 +161,13 @@ class TestSubstance:
         # Смешанный состав
         s4 = Substance("H2O", composition={"H": 2, "O": 1})
         assert pytest.approx(s4.excess_oxidizing) == 1 / 3
+
+
+class TestMixing:
+    """Тесты для функции mixing"""
+
+    pass
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])

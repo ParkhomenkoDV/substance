@@ -25,9 +25,7 @@ REFERENCES = {
 M = prefixes.mega.value
 HERE = os.path.dirname(__file__)  # путь к текущему файлу
 
-hardness = pd.read_excel(os.path.join(HERE, "hardness.xlsx")).drop(
-    ["d10mm"], axis=1
-)  # [1, c.784]
+hardness = pd.read_excel(os.path.join(HERE, "hardness.xlsx")).drop(["d10mm"], axis=1)  # [1, c.784]
 
 
 class Substance:
@@ -81,21 +79,15 @@ class Substance:
 
     def __validate_composition(self, composition: dict) -> dict[str:float]:
         for element, fraction in composition.items():
-            assert isinstance(element, str), TypeError(
-                "Composition elements must be strings"
-            )
-            assert isinstance(fraction, (int, float, np.number)), TypeError(
-                "Composition fractions must be numeric"
-            )
+            assert isinstance(element, str), TypeError("Composition elements must be strings")
+            assert isinstance(fraction, (int, float, np.number)), TypeError("Composition fractions must be numeric")
             assert fraction >= 0, ValueError("Composition values must be >= 0")
         return composition
 
     def __validate_parameter(self, key: str, value: int | float) -> callable:
         """Валидация параметров"""
         assert isinstance(key, str), TypeError(f"{key} must be a str")
-        assert isinstance(value, (int, float, np.number)), TypeError(
-            f"Parameter {key} value must be numeric"
-        )
+        assert isinstance(value, (int, float, np.number)), TypeError(f"Parameter {key} value must be numeric")
         return value
 
     def __validate_function(self, key: str, value: callable) -> callable:
@@ -128,9 +120,7 @@ class Substance:
         new_obj.name = deepcopy(self.name, memo)
 
         # Особое внимание словарям
-        new_obj.composition = {
-            k: deepcopy(v, memo) for k, v in self.composition.items()
-        }
+        new_obj.composition = {k: deepcopy(v, memo) for k, v in self.composition.items()}
         new_obj.parameters = {k: deepcopy(v, memo) for k, v in self.parameters.items()}
         new_obj.functions = {k: v for k, v in self.functions.items()}
 
@@ -153,26 +143,18 @@ class Substance:
         )
 
     @staticmethod
-    def young_modulus(
-        poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None
-    ) -> float:
+    def young_modulus(poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None) -> float:
         """Модуль Юнга I и II рода"""
         if not isinstance(poisson_ratio, (float, int, np.number)) or poisson_ratio <= 0:
             raise ValueError("Poisson ratio must be positive number")
 
         if elastic_modulus is not None:
-            if (
-                not isinstance(elastic_modulus, (float, int, np.number))
-                or elastic_modulus <= 0
-            ):
+            if not isinstance(elastic_modulus, (float, int, np.number)) or elastic_modulus <= 0:
                 raise ValueError("Elastic modulus must be positive number")
             return elastic_modulus / (2 * (poisson_ratio + 1))
 
         if shear_modulus is not None:
-            if (
-                not isinstance(shear_modulus, (float, int, np.number))
-                or shear_modulus <= 0
-            ):
+            if not isinstance(shear_modulus, (float, int, np.number)) or shear_modulus <= 0:
                 raise ValueError("Shear modulus must be positive number")
             return 2 * shear_modulus * (poisson_ratio + 1)
 
@@ -181,14 +163,26 @@ class Substance:
     @property
     def excess_oxidizing(self) -> float:
         """Коэффициент избытка окислителя"""
-        oxidizing = sum(
-            fraction
-            for element, fraction in self.composition.items()
-            if element.startswith("O")
-        )
+        oxidizing = sum(fraction for element, fraction in self.composition.items() if element.startswith("O"))
         total = sum(self.composition.values())
         total = nan if total == 0 else total
         return oxidizing / total
+
+
+def mixing(*inlet_substances) -> None:
+    """Расчет выходных параметров смешения"""
+    outlet = Substance("outlet", parameters={tdp.mf: 0})
+
+    names = set()
+    for inlet_substance in inlet_substances:
+        assert isinstance(inlet_substance, Substance), TypeError(f"{type(inlet_substance)=} not {type(Substance)}")
+
+        names.add(inlet_substance.name)
+        outlet.parameters[tdp.mf] += inlet_substance.parameters[tdp.mf]
+
+    outlet.name = "+".join(names)
+
+    return outlet
 
 
 class Material:
@@ -288,11 +282,7 @@ class Material:
     @classmethod
     def help(cls):
         print(Fore.CYAN + "Material parameters:" + Fore.RESET)
-        print(
-            Fore.RED
-            + "type value must be int, float, array with shape (-1,2) or callable(int | float)"
-            + Fore.RESET
-        )
+        print(Fore.RED + "type value must be int, float, array with shape (-1,2) or callable(int | float)" + Fore.RESET)
         for parameter, d in Material.__PARAMETERS.items():
             print("\t\t" + Fore.CYAN + f"{parameter}" + Fore.RESET)
             for key, value in d.items():
@@ -334,9 +324,7 @@ class Material:
                 )
             elif isinstance(value, (tuple, list, np.ndarray)):  # таблица значений
                 value = array(value).T
-                assert (
-                    len(value.shape) == 2 and value.shape[0] == 2 and value.shape[1] > 3
-                )
+                assert len(value.shape) == 2 and value.shape[0] == 2 and value.shape[1] > 3
                 setattr(
                     self,
                     parameter,
@@ -355,9 +343,7 @@ class Material:
                 except Exception:
                     print(f'parameter "{parameter}" has not callable value!')
             else:
-                raise Exception(
-                    "type of values parameters is in (int, float) or callable(int, float)"
-                )
+                raise Exception("type of values parameters is in (int, float) or callable(int, float)")
 
         if composition is None:
             self.composition = composition
@@ -395,9 +381,7 @@ class Material:
             assert 0 < G
             return 2 * G * (mu + 1)
         else:
-            raise Exception(
-                "isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))"
-            )
+            raise Exception("isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))")
 
     @staticmethod
     def hardness(h: str, value: float | int | np.number) -> dict[str:float]:
@@ -408,9 +392,7 @@ class Material:
         result = dict()
         for column in group.columns:
             temp = group.dropna(subset=column)  # удаление nan
-            func = interpolate.interp1d(
-                temp.index, temp[column], kind=3, fill_value=nan, bounds_error=False
-            )
+            func = interpolate.interp1d(temp.index, temp[column], kind=3, fill_value=nan, bounds_error=False)
             result[column] = float(func(value))
         return result
 
@@ -425,15 +407,7 @@ class Material:
         for i, param in enumerate(parameters):
             if not hasattr(self, param):
                 continue
-            xy = array(
-                [
-                    (t, getattr(self, param)(t))
-                    for t in linspace(
-                        temperature[0], temperature[-1], 1_000, endpoint=True
-                    )
-                    if not isnan(getattr(self, param)(t))
-                ]
-            )
+            xy = array([(t, getattr(self, param)(t)) for t in linspace(temperature[0], temperature[-1], 1_000, endpoint=True) if not isnan(getattr(self, param)(t))])
             fg.add_subplot(gs[0, i])
             plt.grid(True)
             (plt.xlim(temperature[0], temperature[-1]),)
@@ -469,12 +443,8 @@ materials.append(
                     array((0.8, 0.7, 0.6, 0.7)) * 10**6,
                 )
             ).T,
-            "sigma_100": array(
-                (array((650, 700, 800, 850)) + T0, array((620, 480, 250, 180)) * 10**6)
-            ).T,
-            "sigma_200": array(
-                (array((650, 700, 800, 850)) + T0, array((600, 420, 230, 230)) * 10**6)
-            ).T,
+            "sigma_100": array((array((650, 700, 800, 850)) + T0, array((620, 480, 250, 180)) * 10**6)).T,
+            "sigma_200": array((array((650, 700, 800, 850)) + T0, array((600, 420, 230, 230)) * 10**6)).T,
         },
         reference=REFERENCES[2] + ", c. 412-413",
     )
@@ -789,8 +759,7 @@ materials.append(
         {
             "sigma_s": interpolate.interp1d(
                 array((20, 200, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750)) + T0,
-                array((1000, 770, 740, 730, 730, 720, 680, 660, 600, 560, 500, 420))
-                * M,
+                array((1000, 770, 740, 730, 730, 720, 680, 660, 600, 560, 500, 420)) * M,
                 kind=3,
                 fill_value=nan,
                 bounds_error=False,
@@ -1127,3 +1096,30 @@ def main():
     for column in hardness.columns:
         for h in range(0, 1_000 + 1, 10):
             print(f'"{column}": {h}, {Material.hardness(column, h)}')
+
+
+if __name__ == "__main__":
+    substance_inlet_1 = Substance(
+        "air",
+        parameters={
+            tdp.mf: 100,
+        },
+    )
+    substance_inlet_2 = Substance(
+        "exhaust",
+        parameters={
+            tdp.mf: 50,
+        },
+    )
+    substance_inlet_3 = Substance(
+        "air",
+        parameters={
+            tdp.mf: 3,
+        },
+    )
+
+    m = mixing(substance_inlet_1, substance_inlet_2, substance_inlet_3)
+
+    print(f"{m.name = }")
+    for k, v in m.parameters.items():
+        print(f"{k:<10}: {v}")

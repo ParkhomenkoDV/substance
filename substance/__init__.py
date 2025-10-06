@@ -1,2 +1,3 @@
-from .substance import REFERENCES
-from .substance import Substance, Material, materials
+from .substance import REFERENCES, Material, Substance, materials, mixing
+
+__all__ = [REFERENCES, Substance, Material, mixing, materials]

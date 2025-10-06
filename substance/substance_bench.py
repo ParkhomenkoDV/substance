@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 
-from substance import *
+from substance import Substance
 
 
 @pytest.fixture
