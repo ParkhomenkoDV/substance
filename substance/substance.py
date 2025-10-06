@@ -171,16 +171,23 @@ class Substance:
 
 def mixing(*inlet_substances) -> None:
     """Расчет выходных параметров смешения"""
-    outlet = Substance("outlet", parameters={tdp.mf: 0})
+    outlet = Substance("outlet", parameters={tdp.mf: 0, tdp.t: 0, tdp.p: 0})
 
     names = set()
     for inlet_substance in inlet_substances:
         assert isinstance(inlet_substance, Substance), TypeError(f"{type(inlet_substance)=} not {type(Substance)}")
+        for param in (tdp.mf, tdp.t, tdp.p):
+            assert param in inlet_substance.parameters, KeyError(f"substance {inlet_substance} has not parameter {param}")
 
         names.add(inlet_substance.name)
         outlet.parameters[tdp.mf] += inlet_substance.parameters[tdp.mf]
+        outlet.parameters[tdp.t] += inlet_substance.parameters[tdp.mf] * inlet_substance.parameters[tdp.t]
+        outlet.parameters[tdp.p] += inlet_substance.parameters[tdp.mf] * inlet_substance.parameters[tdp.p]
 
     outlet.name = "+".join(names)
+    # Go*io = Gi*ii + Gi*ii + ...
+    outlet.parameters[tdp.t] /= outlet.parameters[tdp.mf]
+    outlet.parameters[tdp.p] /= outlet.parameters[tdp.mf]
 
     return outlet
 
@@ -1103,18 +1110,24 @@ if __name__ == "__main__":
         "air",
         parameters={
             tdp.mf: 100,
+            tdp.t: 300,
+            tdp.p: 101325 * 2,
         },
     )
     substance_inlet_2 = Substance(
         "exhaust",
         parameters={
             tdp.mf: 50,
+            tdp.t: 600,
+            tdp.p: 101325 * 3,
         },
     )
     substance_inlet_3 = Substance(
         "air",
         parameters={
             tdp.mf: 3,
+            tdp.t: 400,
+            tdp.p: 101325 * 4,
         },
     )
 
@@ -1122,4 +1135,4 @@ if __name__ == "__main__":
 
     print(f"{m.name = }")
     for k, v in m.parameters.items():
-        print(f"{k:<10}: {v}")
+        print(f"{k:<15}: {v}")
