@@ -170,4 +170,5 @@ class TestMixing:
 
 
 if __name__ == "__main__":
+    print(__file__)
     pytest.main([__file__, "-v", "-s"])

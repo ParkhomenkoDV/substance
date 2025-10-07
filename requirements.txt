@@ -8,5 +8,3 @@ matplotlib
 
 decorators @ git+https://github.com/ParkhomenkoDV/decorators.git@master
 thermodynamics @ git+https://github.com/ParkhomenkoDV/thermodynamics.git@master
-
-pytest

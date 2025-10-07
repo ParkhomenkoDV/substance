@@ -1,5 +1,3 @@
-# Makefile for Python project
-
 # Configuration
 PROJECT_NAME = substance
 PYTHON = python3
