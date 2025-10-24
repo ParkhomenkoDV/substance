@@ -10,7 +10,6 @@ TEST_DIR = substance
 BENCH_DIR = substance
 SRC_DIR = substance
 REQUIREMENTS = requirements.txt
-DEV_REQUIREMENTS = requirements-dev.txt
 
 # Colors
 RED    = \033[0;31m
@@ -20,7 +19,7 @@ BLUE   = \033[0;34m
 RESET  = \033[0m
 
 # Targets
-.PHONY: help venv venv-activate install test lint format clean run
+.PHONY: help venv venv-activate install test bench lint format clean run
 
 help:
 	@echo "Available commands:"
@@ -47,11 +46,15 @@ activate:
 install:
 	@echo "$(BLUE)Installing production dependencies...$(RESET)"
 	$(PIP_PATH) install --upgrade -r $(REQUIREMENTS)
-	$(PIP_PATH) install --upgrade black flake8 pylint isort pytest 
+	$(PIP_PATH) install --upgrade black flake8 pylint isort pytest pytest-benchmark
 
 test:
 	@echo "$(BLUE)Running tests...$(RESET)"
 	$(PYTHON_PATH) -m pytest $(TEST_DIR) -v -s
+
+bench:
+	@echo "$(BLUE)Running benchmarks...$(RESET)"
+	$(PYTHON_PATH) -m pytest $(BENCH_DIR) -v -s --benchmark-only --benchmark-min-rounds=10
 
 lint:
 	@echo "$(BLUE)Running linters...$(RESET)"

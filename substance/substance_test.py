@@ -83,7 +83,7 @@ class TestSubstance:
         with pytest.raises(AttributeError):
             s.new_attr = "value"
 
-    def test_delete_protection(self):
+    def test_delattr(self):
         """Тест защиты от удаления атрибутов"""
         s = Substance("Water", {"H2O": 1}, parameters={tdp.m: 2})
         with pytest.raises(Exception):
@@ -125,6 +125,7 @@ class TestSubstance:
         s4 = Substance("H2O", composition={"H": 2 / 3, "O": 1 / 3}, parameters={tdp.m: 3})
         s5 = s4 + s1
         assert s5.composition["H"] == (1 * 2 + 2 / 3 * 3) / (2 + 3)
+        assert s5.composition["O"] == (1 / 3 * 3) / (2 + 3)
 
     def test_excess_oxidizing(self):
         """Тест расчета коэффициента избытка окислителя"""

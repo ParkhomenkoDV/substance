@@ -168,27 +168,33 @@ class Substance:
         return oxidizing / total
 
 
-def mixing(*inlet_substances) -> Substance:
+def mixing(*substances) -> Substance:
     """Расчет выходных параметров смешения"""
-    outlet = Substance("outlet", parameters={tdp.mf: 0, tdp.t: 0, tdp.p: 0})
+    names, composition, m, t, p = set(), {}, 0, 0, 0
+    for inlet in substances:
+        assert isinstance(inlet, Substance), TypeError(f"{type(inlet)=} not {type(Substance)}")
+        for param in (tdp.m, tdp.t, tdp.p):
+            assert param in inlet.parameters, KeyError(f"substance {inlet} has not parameter {param}")
 
-    names = set()
-    for inlet_substance in inlet_substances:
-        assert isinstance(inlet_substance, Substance), TypeError(f"{type(inlet_substance)=} not {type(Substance)}")
-        for param in (tdp.mf, tdp.t, tdp.p):
-            assert param in inlet_substance.parameters, KeyError(f"substance {inlet_substance} has not parameter {param}")
+        names.add(inlet.name)
 
-        names.add(inlet_substance.name)
-        outlet.parameters[tdp.mf] += inlet_substance.parameters[tdp.mf]
-        outlet.parameters[tdp.t] += inlet_substance.parameters[tdp.mf] * inlet_substance.parameters[tdp.t]
-        outlet.parameters[tdp.p] += inlet_substance.parameters[tdp.mf] * inlet_substance.parameters[tdp.p]
+        for element, fraction in inlet.composition.items():
+            if element in composition:
+                composition[element] += fraction * inlet.parameters[tdp.m]
+            else:
+                composition[element] = fraction * inlet.parameters[tdp.m]
 
-    outlet.name = "+".join(names)
+        m += inlet.parameters[tdp.m]
+        t += inlet.parameters[tdp.m] * inlet.parameters[tdp.t]
+        p += inlet.parameters[tdp.m] * inlet.parameters[tdp.p]
+
+    name = "+".join(names)
     # Go*io = Gi*ii + Gi*ii + ...
-    outlet.parameters[tdp.t] /= outlet.parameters[tdp.mf]
-    outlet.parameters[tdp.p] /= outlet.parameters[tdp.mf]
-
-    return outlet
+    return Substance(
+        name,
+        composition,
+        parameters={tdp.m: m, tdp.t: t / m, tdp.p: p / m},
+    )
 
 
 def young_modulus(poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None) -> float:
@@ -1126,7 +1132,7 @@ if __name__ == "__main__":
     substance_inlet_1 = Substance(
         "air",
         parameters={
-            tdp.mf: 100,
+            tdp.m: 100,
             tdp.t: 300,
             tdp.p: 101325 * 2,
         },
@@ -1134,7 +1140,7 @@ if __name__ == "__main__":
     substance_inlet_2 = Substance(
         "exhaust",
         parameters={
-            tdp.mf: 50,
+            tdp.m: 50,
             tdp.t: 600,
             tdp.p: 101325 * 3,
         },
@@ -1142,7 +1148,7 @@ if __name__ == "__main__":
     substance_inlet_3 = Substance(
         "air",
         parameters={
-            tdp.mf: 3,
+            tdp.m: 3,
             tdp.t: 400,
             tdp.p: 101325 * 4,
         },
