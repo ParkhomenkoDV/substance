@@ -20,6 +20,7 @@ REFERENCES = {
     Справочник / Б.Н. Арзамасов, Т.В. Соловьева, С.А. Герасимов и др.;
     Под ред. Б.Н. Арзамасова, Т.В. Соловьевой.
     - М.: Изд-во МГТУ им Н.Э. Баумана, 2006. с.: ил.""",
+    3: """PTM 1677-83""",
 }
 
 M = prefixes.mega.value
@@ -32,29 +33,23 @@ class Substance:
     """Вещество"""
 
     __slots__ = (  # запрет других атрибутов + ускорение
-        "name",  # имя
-        "composition",  # химический состав
+        "name",  # имя или химическая формула
+        "composition",  # химический состав смеси и масса
         "parameters",  # параметры
         "functions",  # функции
     )
 
-    def __init__(
-        self,
-        name: str,
-        composition: dict[str, float] = None,
-        parameters: dict = None,
-        functions: dict = None,
-    ) -> None:
+    def __init__(self, name: str, composition: dict[str, float], parameters: dict = None, functions: dict = None) -> None:
         """
         Инициализация вещества.
 
         Args:
             name: Название вещества
-            composition: Химический состав (элемент: доля)
+            composition: Химический состав смеси (элемент: массовая доля)
             parameters: Физические параметры (название: значение/функция)
         """
         self.name: str = name
-        self.composition: dict[str : float | int] = composition or {}
+        self.composition: dict[str:float] = composition
         self.parameters: dict[str : float | int] = parameters or {}
         self.functions: dict[str:callable] = functions or {}
 
@@ -70,6 +65,12 @@ class Substance:
                 return self.__validate_composition(value)
             case "parameters":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+
+                # масса = обязательный атрибут
+                assert tdp.m in value, KeyError(f"'{tdp.m}' not in parameters")
+                assert isinstance(value[tdp.m], (int, float)), TypeError(f"parameters['{tdp.m}']={value[tdp.m]} must be number")
+                assert 0 < value[tdp.m], ValueError(f"parameters['{tdp.m}']={value[tdp.m]} must be > 0")
+
                 return {k: self.__validate_parameter(k, v) for k, v in value.items()}
             case "functions":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
@@ -77,11 +78,24 @@ class Substance:
             case _:
                 raise AttributeError(f"{attribute} not in {self.__slots__}")
 
+    @staticmethod
+    def normalize(composition: dict[str:float]) -> dict[str:float]:
+        """Нормализация химического состава смеси"""
+        mass = sum(composition.values())
+        if mass == 0:
+            return composition
+        for element, fraction in composition.items():
+            composition[element] = fraction / mass
+        return composition
+
     def __validate_composition(self, composition: dict) -> dict[str:float]:
+        """Валидация смеси химического вещества"""
+        assert len(composition) > 0, ValueError(f"empty {composition = }")
         for element, fraction in composition.items():
             assert isinstance(element, str), TypeError("Composition elements must be strings")
             assert isinstance(fraction, (int, float, np.number)), TypeError("Composition fractions must be numeric")
-            assert fraction >= 0, ValueError("Composition values must be >= 0")
+            assert 0 < fraction <= 1, ValueError("Composition values must be in (0..1]")
+        composition = self.normalize(composition)
         return composition
 
     def __validate_parameter(self, key: str, value: int | float) -> callable:
@@ -129,36 +143,21 @@ class Substance:
     def __add__(self, other):
         """Смешение веществ"""
         assert isinstance(other, Substance), TypeError(f"{other} must be a Substance")
-        composition = deepcopy(self.composition)
-        for element in other.composition.keys():
+
+        composition = {element: fraction * self.parameters[tdp.m] for element, fraction in self.composition.items()}
+        for element in other.composition:
             if element not in composition:
-                composition[element] = other.composition[element]
+                composition[element] = other.composition[element] * other.parameters[tdp.m]
             else:
-                composition[element] += other.composition[element]
+                composition[element] += other.composition[element] * other.parameters[tdp.m]
+        composition = self.normalize(composition)
+
         return Substance(
-            self.name + "+" + other.name,
-            composition=composition,
-            parameters={},  # TODO: параметры смешения!
+            f"{self.name}+{other.name}",
+            composition,
+            parameters={tdp.m: self.parameters[tdp.m] + other.parameters[tdp.m]},
             functions={},
         )
-
-    @staticmethod
-    def young_modulus(poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None) -> float:
-        """Модуль Юнга I и II рода"""
-        if not isinstance(poisson_ratio, (float, int, np.number)) or poisson_ratio <= 0:
-            raise ValueError("Poisson ratio must be positive number")
-
-        if elastic_modulus is not None:
-            if not isinstance(elastic_modulus, (float, int, np.number)) or elastic_modulus <= 0:
-                raise ValueError("Elastic modulus must be positive number")
-            return elastic_modulus / (2 * (poisson_ratio + 1))
-
-        if shear_modulus is not None:
-            if not isinstance(shear_modulus, (float, int, np.number)) or shear_modulus <= 0:
-                raise ValueError("Shear modulus must be positive number")
-            return 2 * shear_modulus * (poisson_ratio + 1)
-
-        raise ValueError("Either elastic_modulus or shear_modulus must be provided")
 
     @property
     def excess_oxidizing(self) -> float:
@@ -169,7 +168,7 @@ class Substance:
         return oxidizing / total
 
 
-def mixing(*inlet_substances) -> None:
+def mixing(*inlet_substances) -> Substance:
     """Расчет выходных параметров смешения"""
     outlet = Substance("outlet", parameters={tdp.mf: 0, tdp.t: 0, tdp.p: 0})
 
@@ -190,6 +189,24 @@ def mixing(*inlet_substances) -> None:
     outlet.parameters[tdp.p] /= outlet.parameters[tdp.mf]
 
     return outlet
+
+
+def young_modulus(poisson_ratio: float, elastic_modulus: float = None, shear_modulus: float = None) -> float:
+    """Модуль Юнга I и II рода"""
+    if not isinstance(poisson_ratio, (float, int, np.number)) or poisson_ratio <= 0:
+        raise ValueError("Poisson ratio must be positive number")
+
+    if elastic_modulus is not None:
+        if not isinstance(elastic_modulus, (float, int, np.number)) or elastic_modulus <= 0:
+            raise ValueError("Elastic modulus must be positive number")
+        return elastic_modulus / (2 * (poisson_ratio + 1))
+
+    if shear_modulus is not None:
+        if not isinstance(shear_modulus, (float, int, np.number)) or shear_modulus <= 0:
+            raise ValueError("Shear modulus must be positive number")
+        return 2 * shear_modulus * (poisson_ratio + 1)
+
+    raise ValueError("Either elastic_modulus or shear_modulus must be provided")
 
 
 class Material:
