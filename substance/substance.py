@@ -92,7 +92,6 @@ class Substance:
 
     def __validate_composition(self, composition: Dict[str, float]) -> Dict[str, float]:
         """Валидация смеси химического вещества"""
-        assert len(composition) > 0, ValueError(f"empty {composition = }")
         for element, fraction in composition.items():
             assert isinstance(element, str), TypeError("Composition elements must be strings")
             assert isinstance(fraction, (int, float, np.number)), TypeError("Composition fractions must be numeric")
