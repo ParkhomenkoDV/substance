@@ -1,5 +1,6 @@
 import os
 from copy import deepcopy
+from typing import Callable, Dict, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,19 +40,26 @@ class Substance:
         "functions",  # функции
     )
 
-    def __init__(self, name: str, composition: dict[str, float], parameters: dict = None, functions: dict = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        composition: Dict[str, float] = None,
+        parameters: Dict[str, Union[int, float]] = None,
+        functions: Dict[str, Callable] = None,
+    ) -> None:
         """
         Инициализация вещества.
 
         Args:
             name: Название вещества
             composition: Химический состав смеси (элемент: массовая доля)
-            parameters: Физические параметры (название: значение/функция)
+            parameters: Физические параметры (название: значение)
+            functions: Физические функции (название: функция)
         """
         self.name: str = name
-        self.composition: dict[str:float] = composition
-        self.parameters: dict[str : float | int] = parameters or {}
-        self.functions: dict[str:callable] = functions or {}
+        self.composition: Dict[str, float] = composition or {}
+        self.parameters: Dict[str, Union[float, int]] = parameters or {}
+        self.functions: Dict[str, Callable] = functions or {}
 
     def __validate_attribute(self, attribute: str, value: str | dict) -> str | dict:
         """Валидирование атрибутов"""
@@ -65,21 +73,15 @@ class Substance:
                 return self.__validate_composition(value)
             case "parameters":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
-
-                # масса = обязательный атрибут
-                assert tdp.m in value, KeyError(f"'{tdp.m}' not in parameters")
-                assert isinstance(value[tdp.m], (int, float)), TypeError(f"parameters['{tdp.m}']={value[tdp.m]} must be number")
-                assert 0 < value[tdp.m], ValueError(f"parameters['{tdp.m}']={value[tdp.m]} must be > 0")
-
                 return {k: self.__validate_parameter(k, v) for k, v in value.items()}
             case "functions":
                 assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
                 return {k: self.__validate_function(k, v) for k, v in value.items()}
             case _:
-                raise AttributeError(f"{attribute} not in {self.__slots__}")
+                raise AttributeError(f"'{attribute}' not in {self.__slots__}")
 
     @staticmethod
-    def normalize(composition: dict[str:float]) -> dict[str:float]:
+    def normalize(composition: Dict[str, float]) -> Dict[str, float]:
         """Нормализация химического состава смеси"""
         mass = sum(composition.values())
         if mass == 0:
@@ -88,7 +90,7 @@ class Substance:
             composition[element] = fraction / mass
         return composition
 
-    def __validate_composition(self, composition: dict) -> dict[str:float]:
+    def __validate_composition(self, composition: Dict[str, float]) -> Dict[str, float]:
         """Валидация смеси химического вещества"""
         assert len(composition) > 0, ValueError(f"empty {composition = }")
         for element, fraction in composition.items():
@@ -98,13 +100,13 @@ class Substance:
         composition = self.normalize(composition)
         return composition
 
-    def __validate_parameter(self, key: str, value: int | float) -> callable:
+    def __validate_parameter(self, key: str, value: Union[int, float]) -> Union[int, float]:
         """Валидация параметров"""
         assert isinstance(key, str), TypeError(f"{key} must be a str")
         assert isinstance(value, (int, float, np.number)), TypeError(f"Parameter {key} value must be numeric")
         return value
 
-    def __validate_function(self, key: str, value: callable) -> callable:
+    def __validate_function(self, key: str, value: callable) -> Callable:
         """Валидация функций"""
         assert isinstance(key, str), TypeError(f"{key} must be a str")
         assert callable(value), TypeError(f"Function {key} value must be callable")
@@ -140,32 +142,14 @@ class Substance:
 
         return new_obj
 
-    def __add__(self, other):
-        """Смешение веществ"""
-        assert isinstance(other, Substance), TypeError(f"{other} must be a Substance")
-
-        composition = {element: fraction * self.parameters[tdp.m] for element, fraction in self.composition.items()}
-        for element in other.composition:
-            if element not in composition:
-                composition[element] = other.composition[element] * other.parameters[tdp.m]
-            else:
-                composition[element] += other.composition[element] * other.parameters[tdp.m]
-        composition = self.normalize(composition)
-
-        return Substance(
-            f"{self.name}+{other.name}",
-            composition,
-            parameters={tdp.m: self.parameters[tdp.m] + other.parameters[tdp.m]},
-            functions={},
-        )
-
     @property
-    def excess_oxidizing(self) -> float:
-        """Коэффициент избытка окислителя"""
-        oxidizing = sum(fraction for element, fraction in self.composition.items() if element.startswith("O"))
+    def humidity(self) -> float:
+        """Влажность"""
+        h2o = self.composition.get("H2O", 0)
         total = sum(self.composition.values())
-        total = nan if total == 0 else total
-        return oxidizing / total
+        if total == 0:
+            return nan
+        return h2o / total
 
 
 def mixing(*substances) -> Substance:

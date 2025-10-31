@@ -46,15 +46,6 @@ class TestSubstanceBenchmark:
         """Бенчмарк глубокого копирования"""
         benchmark(deepcopy, water)
 
-    def test_add(self, benchmark, water):
-        """Бенчмарк операции сложения веществ"""
-        other = Substance("Salt", composition={"Na": 1, "Cl": 1}, parameters={tdp.m: 0.5})
-        benchmark(lambda: water + other)
-
-    def test_excess_oxidizing(self, benchmark, water):
-        """Бенчмарк вычисления свойства"""
-        benchmark(lambda: water.excess_oxidizing)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s", "--benchmark-only", "--benchmark-min-rounds=10"])

@@ -111,40 +111,6 @@ class TestSubstance:
         # Проверка, что функции работают корректно
         assert s1.functions["Cp"](T=1) == s2.functions["Cp"](T=1)
 
-    def test_add(self):
-        """Тест сложения веществ"""
-        s1 = Substance("H2", composition={"H": 1}, parameters={tdp.m: 2})
-        s2 = Substance("O", composition={"O": 1}, parameters={tdp.m: 1})
-        s3 = s1 + s2
-
-        assert s3.name == "H2+O"
-        assert s3.parameters[tdp.m] == 2 + 1
-        assert s3.composition == {"H": (1 * 2) / (2 + 1), "O": (1 * 1) / (2 + 1)}
-
-        # Проверка с общими элементами
-        s4 = Substance("H2O", composition={"H": 2 / 3, "O": 1 / 3}, parameters={tdp.m: 3})
-        s5 = s4 + s1
-        assert s5.composition["H"] == (1 * 2 + 2 / 3 * 3) / (2 + 3)
-        assert s5.composition["O"] == (1 / 3 * 3) / (2 + 3)
-
-    def test_excess_oxidizing(self):
-        """Тест расчета коэффициента избытка окислителя"""
-        # Вещество с кислородом
-        s1 = Substance("O2", composition={"O": 1}, parameters={tdp.m: 10})
-        assert s1.excess_oxidizing == 1.0
-
-        # Вещество без кислорода
-        s2 = Substance("H2", composition={"H": 1}, parameters={tdp.m: 10})
-        assert s2.excess_oxidizing == 0.0
-
-        # Пустой состав
-        with pytest.raises((AssertionError, ValueError)):
-            Substance("Empty", {}, parameters={tdp.m: 5})
-
-        # Смешанный состав
-        s4 = Substance("H2O", composition={"H": 0.13, "O": 0.87}, parameters={tdp.m: 10})
-        assert pytest.approx(s4.excess_oxidizing) == 0.87
-
 
 class TestMixing:
     """Тесты для функции mixing"""
