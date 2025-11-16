@@ -19,7 +19,7 @@ BLUE   = \033[0;34m
 RESET  = \033[0m
 
 # Targets
-.PHONY: help venv venv-activate install test bench lint format clean run
+.PHONY: help venv activate install test bench lint format clean run
 
 help:
 	@echo "Available commands:"
