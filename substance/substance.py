@@ -1,10 +1,8 @@
-import os
 from copy import deepcopy
 from typing import Callable, Dict, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from colorama import Fore
 from mathematics import prefixes
 from numpy import arange, array, isnan, linspace, nan
@@ -25,9 +23,6 @@ REFERENCES = {
 }
 
 M = prefixes.mega.value
-HERE = os.path.dirname(__file__)  # путь к текущему файлу
-
-hardness = pd.read_excel(os.path.join(HERE, "hardness.xlsx")).drop(["d10mm"], axis=1)  # [1, c.784]
 
 
 class Substance:
@@ -395,19 +390,6 @@ class Material:
             return 2 * G * (mu + 1)
         else:
             raise Exception("isinstance(E, (float, int, np.number)) or isinstance(G, (float, int, np.number))")
-
-    @staticmethod
-    def hardness(h: str, value: float | int | np.number) -> dict[str:float]:
-        """Перевод твердости"""
-        assert h in hardness.columns, hardness.columns
-        assert isinstance(value, (float, int, np.number)) and 0 <= value
-        group = hardness.groupby(h).mean()  # замена дубликатов их средним значением
-        result = dict()
-        for column in group.columns:
-            temp = group.dropna(subset=column)  # удаление nan
-            func = interpolate.interp1d(temp.index, temp[column], kind=3, fill_value=nan, bounds_error=False)
-            result[column] = float(func(value))
-        return result
 
     def show(self, temperature: tuple | list | np.ndarray, **kwargs) -> None:
         assert isinstance(temperature, (tuple, list, np.ndarray))
@@ -1105,10 +1087,6 @@ def main():
             if callable(v):
                 print("\t" + f"{k}({t}): {v(t)}")
         material.show(temperature)
-
-    for column in hardness.columns:
-        for h in range(0, 1_000 + 1, 10):
-            print(f'"{column}": {h}, {Material.hardness(column, h)}')
 
 
 if __name__ == "__main__":
