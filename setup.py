@@ -21,6 +21,6 @@ setup(
     python_requires=">=3.9",
     install_requires=install_requires,
     package_data={
-        "substance": ["hardness.xlsx"],
+        "substance": [],  # доп. файлы библиотеки
     },
 )

@@ -3,7 +3,24 @@ from copy import deepcopy
 import pytest
 from thermodynamics import parameters as tdp
 
-from substance import Substance, young_modulus
+try:
+    from .substance import Substance, young_modulus
+except ImportError:
+    from substance import Substance, young_modulus
+
+
+@pytest.fixture
+def water():
+    """Сложное вещество со всеми параметрами"""
+    return Substance(
+        "Water",
+        composition={"H": 2 / 3, "O": 1 / 3},
+        parameters={"density": 1000, tdp.m: 10},
+        functions={
+            "heat_capacity": lambda T: 4186 + 0.1 * T,
+            "conductivity": lambda P: 0.6 + 0.01 * P,
+        },
+    )
 
 
 class TestSubstance:
@@ -30,6 +47,29 @@ class TestSubstance:
         assert s.composition == {"H": 2 / 3, "O": 1 / 3}
         assert s.parameters == {tdp.m: 2, "density": 1_000}
         assert "calc" in s.functions
+
+    @pytest.mark.benchmark
+    def test_substance_init(self, benchmark):
+        def benchfunc():
+            return Substance(
+                "bench",
+                {"H": 2 / 3, "O": 1 / 3},
+                parameters={tdp.m: 1},
+                functions={"Cp": lambda T: 1000 + T},
+            )
+
+        benchmark(benchfunc)
+
+    @pytest.mark.parametrize("attr", ["name", "composition", "parameters", "functions"])
+    @pytest.mark.benchmark
+    def test_substance_getattr(self, benchmark, water, attr):
+        """Бенчмарк доступа к атрибутам"""
+        benchmark(lambda: getattr(water, attr))
+
+    @pytest.mark.benchmark
+    def test_substance_deepcopy(self, benchmark, water):
+        """Бенчмарк глубокого копирования"""
+        benchmark(deepcopy, water)
 
     def test_name_validation(self):
         """Тест валидации имени"""
@@ -140,5 +180,4 @@ def test_young_modulus():
 
 
 if __name__ == "__main__":
-    print(__file__)
-    pytest.main([__file__, "-v", "-s"])
+    pytest.main([__file__, "-v", "-s", "-x"])
