@@ -455,15 +455,15 @@ data = (
 
 def interpolate(x_hardness: str, y_hardness: str, strategy="mean", kind: int = 1):
     # Извлекаем данные в numpy массивы
-    x_data = array([d[x_hardness] for d in data])
-    y_data = array([d[y_hardness] for d in data])
+    x_data = array([d[x_hardness] for d in data], dtype="float64")
+    y_data = array([d[y_hardness] for d in data], dtype="float64")
 
     x_unique = unique(x_data)
     # Вычисляем y для каждого уникального x
     if strategy == "mean":
-        y_unique = array([mean(y_data[x_data == x]) for x in x_unique])
+        y_unique = array([mean(y_data[x_data == x] if len(y_data[x_data == x]) > 1 else 0) for x in x_unique])
     elif strategy == "median":
-        y_unique = array([median(y_data[x_data == x]) for x in x_unique])
+        y_unique = array([median(y_data[x_data == x] if len(y_data[x_data == x]) > 1 else 0) for x in x_unique])
 
     return interp1d(x_unique, y_unique, kind=kind, bounds_error=False, fill_value=nan)
 
@@ -535,17 +535,59 @@ class Hardness:
 
             match k:
                 case "HB":
-                    return {"HB": v, "HRA": float(cls.HB_HRA(v)), "HRC": float(cls.HB_HRC(v)), "HRB": float(cls.HB_HRB(v)), "HV": float(cls.HB_HV(v)), "HSD": float(cls.HB_HSD(v))}
+                    return {
+                        "HB": v,
+                        "HRA": float(cls.HB_HRA(v)),
+                        "HRC": float(cls.HB_HRC(v)),
+                        "HRB": float(cls.HB_HRB(v)),
+                        "HV": float(cls.HB_HV(v)),
+                        "HSD": float(cls.HB_HSD(v)),
+                    }
                 case "HRA":
-                    return {"HB": float(cls.HRA_HB(v)), "HRA": v, "HRC": float(cls.HRA_HRC(v)), "HRB": float(cls.HRA_HRB(v)), "HV": float(cls.HRA_HV(v)), "HSD": float(cls.HRA_HSD(v))}
+                    return {
+                        "HB": float(cls.HRA_HB(v)),
+                        "HRA": v,
+                        "HRC": float(cls.HRA_HRC(v)),
+                        "HRB": float(cls.HRA_HRB(v)),
+                        "HV": float(cls.HRA_HV(v)),
+                        "HSD": float(cls.HRA_HSD(v)),
+                    }
                 case "HRC":
-                    return {"HB": float(cls.HRC_HB(v)), "HRA": float(cls.HRC_HRA(v)), "HRC": v, "HRB": float(cls.HRC_HRB(v)), "HV": float(cls.HRC_HV(v)), "HSD": float(cls.HRC_HSD(v))}
+                    return {
+                        "HB": float(cls.HRC_HB(v)),
+                        "HRA": float(cls.HRC_HRA(v)),
+                        "HRC": v,
+                        "HRB": float(cls.HRC_HRB(v)),
+                        "HV": float(cls.HRC_HV(v)),
+                        "HSD": float(cls.HRC_HSD(v)),
+                    }
                 case "HRB":
-                    return {"HB": float(cls.HRB_HB(v)), "HRA": float(cls.HRB_HRA(v)), "HRC": float(cls.HRB_HRC(v)), "HRB": v, "HV": float(cls.HRB_HV(v)), "HSD": float(cls.HRB_HSD(v))}
+                    return {
+                        "HB": float(cls.HRB_HB(v)),
+                        "HRA": float(cls.HRB_HRA(v)),
+                        "HRC": float(cls.HRB_HRC(v)),
+                        "HRB": v,
+                        "HV": float(cls.HRB_HV(v)),
+                        "HSD": float(cls.HRB_HSD(v)),
+                    }
                 case "HV":
-                    return {"HB": float(cls.HV_HB(v)), "HRA": float(cls.HV_HRA(v)), "HRC": float(cls.HV_HRC(v)), "HRB": float(cls.HV_HRB(v)), "HV": v, "HSD": float(cls.HV_HSD(v))}
+                    return {
+                        "HB": float(cls.HV_HB(v)),
+                        "HRA": float(cls.HV_HRA(v)),
+                        "HRC": float(cls.HV_HRC(v)),
+                        "HRB": float(cls.HV_HRB(v)),
+                        "HV": v,
+                        "HSD": float(cls.HV_HSD(v)),
+                    }
                 case "HSD":
-                    return {"HB": float(cls.HSD_HB(v)), "HRA": float(cls.HSD_HRA(v)), "HRC": float(cls.HSD_HRC(v)), "HRB": float(cls.HSD_HRB(v)), "HV": float(cls.HSD_HV(v)), "HSD": v}
+                    return {
+                        "HB": float(cls.HSD_HB(v)),
+                        "HRA": float(cls.HSD_HRA(v)),
+                        "HRC": float(cls.HSD_HRC(v)),
+                        "HRB": float(cls.HSD_HRB(v)),
+                        "HV": float(cls.HSD_HV(v)),
+                        "HSD": v,
+                    }
                 case _:
                     return {}
 
