@@ -461,9 +461,9 @@ def interpolate(x_hardness: str, y_hardness: str, strategy="mean", kind: int = 1
     x_unique = unique(x_data)
     # Вычисляем y для каждого уникального x
     if strategy == "mean":
-        y_unique = array([mean(y_data[x_data == x] if len(y_data[x_data == x]) > 1 else 0) for x in x_unique])
+        y_unique = array([mean(y_data[x_data == x] if len(y_data[x_data == x]) > 0 else 0) for x in x_unique])
     elif strategy == "median":
-        y_unique = array([median(y_data[x_data == x] if len(y_data[x_data == x]) > 1 else 0) for x in x_unique])
+        y_unique = array([median(y_data[x_data == x] if len(y_data[x_data == x]) > 0 else 0) for x in x_unique])
 
     return interp1d(x_unique, y_unique, kind=kind, bounds_error=False, fill_value=nan)
 

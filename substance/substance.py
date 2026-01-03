@@ -97,7 +97,7 @@ class Substance:
     def __validate_parameter(self, key: str, value: Union[int, float]) -> Union[int, float]:
         """Валидация параметров"""
         assert isinstance(key, str), TypeError(f"{key} must be a str")
-        assert isinstance(value, (int, float, np.number)), TypeError(f"Parameter {key} value must be numeric")
+        assert isinstance(value, (int, float, np.number)), TypeError(f"Parameter {key}={value} must be numeric")
         return value
 
     def __validate_function(self, key: str, value: callable) -> Callable:

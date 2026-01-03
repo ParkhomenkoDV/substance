@@ -22,7 +22,7 @@ class TestHardness:
                     if isnan(v):
                         continue
                     else:
-                        assert v == pytest.approx(d[k], rel=0.02), AssertionError(f"{key}={value} -> {k}={v}")
+                        assert v == pytest.approx(d[k], rel=0.02), f"{key}={value} -> {k}={v}"
 
     @pytest.mark.benchmark
     def test_hardness_init(self, benchmark):
