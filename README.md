@@ -19,10 +19,10 @@ go get github.com/ParkhomenkoDV/substance
 ## Project structure
 ```
 gte/
-|--- docs/  # documentations
-|--- examples/  # tutorial
-|--- assets/images/  # docs images
-|--- substance/  # source code
+|--- docs/ 
+|--- examples/  
+|--- assets/images/  
+|--- substance/  
 |--- .gitignore
 |--- README.md  
 |--- requirements.txt
