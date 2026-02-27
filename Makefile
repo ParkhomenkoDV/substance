@@ -21,7 +21,7 @@ BLUE   = \033[0;34m
 RESET  = \033[0m
 
 # Targets
-.PHONY: help venv activate install test bench lint format clean run
+.PHONY: help venv activate install test bench lint format clean
 
 help:
 	@echo "Available commands:"
@@ -32,7 +32,6 @@ help:
 	@echo "  make lint           - Run linters (flake8, pylint)"
 	@echo "  make format         - Format code (black, isort)"
 	@echo "  make clean          - Clean project"
-	@echo "  make run            - Run main script"
 
 venv:
 	@echo "$(BLUE)Creating virtual environment...$(RESET)"
@@ -53,6 +52,7 @@ install:
 test:
 	@echo "$(BLUE)Running tests...$(RESET)"
 	$(PYTHON_PATH) -m pytest $(TEST_DIR) -v -s -x -m "not benchmark"
+	go test ./...
 
 bench:
 	@echo "$(BLUE)Running benchmarks...$(RESET)"
@@ -75,7 +75,3 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 	rm -rf .coverage htmlcov
-
-run:
-	@echo "$(BLUE)Running project...$(RESET)"
-	$(PYTHON_PATH) $(SRC_DIR)/main.py
