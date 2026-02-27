@@ -52,7 +52,7 @@ install:
 test:
 	@echo "$(BLUE)Running tests...$(RESET)"
 	$(PYTHON_PATH) -m pytest $(TEST_DIR) -v -s -x -m "not benchmark"
-	go test ./...
+	go test ./... -cover
 
 bench:
 	@echo "$(BLUE)Running benchmarks...$(RESET)"
