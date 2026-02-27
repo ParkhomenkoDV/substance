@@ -5,8 +5,15 @@
 Describe anything.
 
 ## Installation
+
+### Python
 ```python
 pip install --upgrade git+https://github.com/ParkhomenkoDV/substance.git@master
+```
+
+### Go
+```go 
+go get github.com/ParkhomenkoDV/substance
 ```
 
 ## Project structure
@@ -20,10 +27,12 @@ gte/
 |--- README.md  
 |--- requirements.txt
 |--- setup.py
+|--- substance_test.go
+|--- substance.go
 ```
 
-## benchmarks
-
+## Benchmarks
+```
 ----------------------------------------------------------------- benchmark: 7 tests -----------------------------------------------------------------
 Name (time in us)                           Min                Max               Mean            StdDev             Median            Rounds  Outliers
 ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -35,3 +44,4 @@ test_substance_getattr[name]             0.0444 (1.0)       0.4766 (1.37)      0
 test_substance_getattr[parameters]       0.0452 (1.02)      0.3793 (1.09)      0.0521 (1.02)     0.0028 (1.11)      0.0522 (1.01)     19669719098;19514
 test_substance_init                      1.1250 (25.32)    65.1249 (186.86)    1.3535 (26.41)    0.3982 (159.36)    1.3750 (26.65)     58970   309;897
 ------------------------------------------------------------------------------------------------------------------------------------------------------
+```
