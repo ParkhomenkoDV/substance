@@ -45,15 +45,10 @@ test_substance_getattr[parameters]       0.0333 (1.0)       0.3958 (1.14)      0
 test_substance_init                      1.1249 (33.80)    43.9590 (126.97)    1.3508 (35.64)    0.3418 (135.55)    1.3340 (35.32)    102564  1322;19529
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
-Legend:
-  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
-  OPS: Operations Per Second, computed as 1 / Mean
-================================================================================================================================================================ 7 passed, 10 deselected in 6.82s ================================================================================================================================================================
 go test ./... -bench=. -benchmem -benchtime=1s -count=1
 goos: darwin
 goarch: arm64
 pkg: github.com/ParkhomenkoDV/substance
 cpu: Apple M4
 BenchmarkNewSubstance-10        1000000000               0.2317 ns/op          0 B/op          0 allocs/op
-PASS
 ```
