@@ -313,3 +313,44 @@ func TestSubstanceEmpty(t *testing.T) {
 		t.Errorf("F() with empty functions = %v, want nil", "lhjeb")
 	}
 }
+
+// Бенчмарк создания вещества с множеством параметров
+func BenchmarkNewSubstance(b *testing.B) {
+	b.StopTimer() // Останавливаем таймер для подготовки данных
+
+	// Подготавливаем параметры
+	params := make(map[string]Parameter)
+	for i := 0; i < 100; i++ {
+		name := string(rune('A'+i%26)) + string(rune('a'+(i/26)%26))
+		params[name] = NewParameter(
+			name,
+			float64(i)*1.5,
+			units.Meter,
+			"Test parameter",
+		)
+	}
+
+	// Подготавливаем функции
+	funcs := make(map[string]func(map[string]Parameter) float64)
+	for i := 0; i < 20; i++ {
+		funcName := string(rune('F'+i%26)) + string(rune('f'+(i/26)%26))
+		funcs[funcName] = func(p map[string]Parameter) float64 {
+			var sum float64
+			for _, v := range p {
+				sum += v.SI
+			}
+			return sum
+		}
+	}
+
+	b.StartTimer() // Запускаем таймер
+
+	for i := 0; i < b.N; i++ {
+		substance := Substance{
+			Name:       "Complex",
+			Parameters: params,
+			Functions:  funcs,
+		}
+		_ = substance
+	}
+}
