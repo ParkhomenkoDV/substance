@@ -58,19 +58,24 @@ class Substance:
 
     def __validate_attribute(self, attribute: str, value: str | dict) -> str | dict:
         """Валидирование атрибутов"""
-        assert isinstance(attribute, str), TypeError(f"{attribute} must be str")
+        if not isinstance(attribute, str):
+            raise TypeError(f"{attribute} must be str")
         match attribute:
             case "name":
-                assert isinstance(value, str), TypeError(f"{attribute} must be a str")
+                if not isinstance(value, str):
+                    raise TypeError(f"{attribute} must be a str")
                 return value
             case "composition":
-                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                if not isinstance(value, dict):
+                    raise TypeError(f"{attribute} must be a dict")
                 return self.__validate_composition(value)
             case "parameters":
-                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                if not isinstance(value, dict):
+                    raise TypeError(f"{attribute} must be a dict")
                 return {k: self.__validate_parameter(k, v) for k, v in value.items()}
             case "functions":
-                assert isinstance(value, dict), TypeError(f"{attribute} must be a dict")
+                if not isinstance(value, dict):
+                    raise TypeError(f"{attribute} must be a dict")
                 return {k: self.__validate_function(k, v) for k, v in value.items()}
             case _:
                 raise AttributeError(f"'{attribute}' not in {self.__slots__}")
