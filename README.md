@@ -50,5 +50,7 @@ goos: darwin
 goarch: arm64
 pkg: github.com/ParkhomenkoDV/substance
 cpu: Apple M4
-BenchmarkNewSubstance-10        1000000000               0.2317 ns/op          0 B/op          0 allocs/op
+BenchmarkSubstanceP-10          189697689                5.720 ns/op           0 B/op          0 allocs/op
+BenchmarkSubstanceF-10          30747648                42.49 ns/op            0 B/op          0 allocs/op
+BenchmarkNewSubstance-10        1000000000               0.2492 ns/op          0 B/op          0 allocs/op
 ```
