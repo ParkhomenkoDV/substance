@@ -10,6 +10,7 @@ Describe anything.
 ```bash
 pip install --upgrade git+https://github.com/ParkhomenkoDV/substance.git@main
 ```
+[requirements](./requirements.txt)
 
 ### Go
 ```bash
@@ -23,6 +24,7 @@ gte/
 |--- examples/  
 |--- assets/images/  
 |--- substance/  
+|    |--- substance.py
 |--- .gitignore
 |--- README.md  
 |--- requirements.txt
