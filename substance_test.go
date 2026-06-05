@@ -5,6 +5,119 @@ import (
 	"testing"
 )
 
+func TestInit(t *testing.T) {
+	t.Run("Init hard", func(t *testing.T) {
+		s := Substance{
+			Name: "test",
+			Parameters: map[string]float64{
+				"eo": 3,
+				"m":  50,
+				"t":  300,
+				"p":  101_325,
+			},
+			Functions: map[string]func(map[string]float64) float64{
+				"hcp": func(ps map[string]float64) float64 {
+					return ps["t"] + 3
+				},
+			},
+		}
+		enthalpy := s.F("hcp")(map[string]float64{"t": 500}) * s.P("m") * s.P("t")
+		if enthalpy != 7_545_000 {
+			t.Errorf("got: %v, want: %v", enthalpy, 7_545_000)
+		}
+	})
+	t.Run("Init pretty", func(t *testing.T) {
+		s := Substance{
+			Name: "test",
+			Parameters: Parameters{
+				"eo": 3,
+				"m":  50,
+				"t":  300,
+				"p":  101_325,
+			},
+			Functions: Functions{
+				"hcp": func(ps Parameters) Parameter {
+					return ps["t"] + 3
+				},
+			},
+		}
+		enthalpy := s.F("hcp")(Parameters{"t": 500}) * s.P("m") * s.P("t")
+		if enthalpy != 7_545_000 {
+			t.Errorf("got: %v, want: %v", enthalpy, 7_545_000)
+		}
+	})
+}
+
+func TestSubstanceC(t *testing.T) {
+	// Создаём вещество с химическим составом
+	composition := map[string]float64{
+		"H2O":    0.80,
+		"NaCl":   0.15,
+		"C2H5OH": 0.05,
+	}
+
+	substance := Substance{
+		Name:        "TestSolution",
+		Composition: composition,
+		Parameters:  make(Parameters),
+		Functions:   make(Functions),
+	}
+
+	tests := []struct {
+		name      string
+		component string
+		wantPanic bool
+		wantValue float64
+	}{
+		{
+			name:      "Existing component H2O",
+			component: "H2O",
+			wantPanic: false,
+			wantValue: 0.80,
+		},
+		{
+			name:      "Existing component NaCl",
+			component: "NaCl",
+			wantPanic: false,
+			wantValue: 0.15,
+		},
+		{
+			name:      "Existing component C2H5OH",
+			component: "C2H5OH",
+			wantPanic: false,
+			wantValue: 0.05,
+		},
+		{
+			name:      "Non-existent component",
+			component: "CO2",
+			wantPanic: true,
+		},
+		{
+			name:      "Empty string",
+			component: "",
+			wantPanic: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("C() did not panic for non-existent component")
+					}
+				}()
+				substance.C(tt.component)
+			} else {
+				got := substance.C(tt.component)
+				if math.Abs(got-tt.wantValue) > 1e-10 {
+					t.Errorf("C(%q) = %v, want %v", tt.component, got, tt.wantValue)
+				}
+			}
+		})
+	}
+}
+
 func TestSubstanceP(t *testing.T) {
 	// Create test parameters
 	params := map[string]float64{
@@ -16,7 +129,7 @@ func TestSubstanceP(t *testing.T) {
 	substance := Substance{
 		Name:       "test",
 		Parameters: params,
-		Functions:  make(map[string]func(map[string]float64) float64),
+		Functions:  make(Functions),
 	}
 
 	tests := []struct {
@@ -67,15 +180,15 @@ func TestSubstanceP(t *testing.T) {
 
 func TestSubstanceF(t *testing.T) {
 	// Test functions
-	functions := map[string]func(map[string]float64) float64{
-		"double": func(p map[string]float64) float64 {
-			if val, ok := p["value"]; ok {
+	functions := map[string]func(Parameters) float64{
+		"double": func(ps Parameters) float64 {
+			if val, ok := ps["value"]; ok {
 				return val * 2
 			}
 			return 0
 		},
-		"square": func(p map[string]float64) float64 {
-			if val, ok := p["value"]; ok {
+		"square": func(ps Parameters) float64 {
+			if val, ok := ps["value"]; ok {
 				return val * val
 			}
 			return 0
@@ -148,6 +261,12 @@ func TestSubstanceF(t *testing.T) {
 
 func TestSubstanceWithMultipleParameters(t *testing.T) {
 	// Create substance with parameters and functions
+	composition := map[string]float64{
+		"A": 0.3,
+		"B": 0.3,
+		"C": 0.4,
+	}
+
 	parameters := map[string]float64{
 		"length": 5.0,
 		"width":  3.0,
@@ -156,27 +275,51 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 		"time":   60.0,
 	}
 
-	functions := map[string]func(map[string]float64) float64{
-		"volume": func(p map[string]float64) float64 {
-			return p["length"] * p["width"] * p["height"]
+	functions := Functions{
+		"volume": func(ps Parameters) float64 {
+			return ps["length"] * ps["width"] * ps["height"]
 		},
-		"density": func(p map[string]float64) float64 {
-			volume := p["length"] * p["width"] * p["height"]
+		"density": func(ps Parameters) float64 {
+			volume := ps["length"] * ps["width"] * ps["height"]
 			if volume == 0 {
 				return 0
 			}
-			return p["mass"] / volume
+			return ps["mass"] / volume
 		},
-		"speed": func(p map[string]float64) float64 {
-			return p["length"] / p["time"]
+		"speed": func(ps Parameters) float64 {
+			return ps["length"] / ps["time"]
 		},
 	}
 
 	substance := Substance{
-		Name:       "Test Substance",
-		Parameters: parameters,
-		Functions:  functions,
+		Name:        "Test Substance",
+		Composition: composition,
+		Parameters:  parameters,
+		Functions:   functions,
 	}
+
+	t.Run("", func(t *testing.T) {
+		// Проверяем, что все компоненты доступны и их сумма = 1.0
+		sum := 0.0
+		for name, expected := range composition {
+			got := substance.C(name)
+			if math.Abs(got-expected) > 1e-10 {
+				t.Errorf("C(%q) = %v, want %v", name, got, expected)
+			}
+			sum += got
+		}
+		if math.Abs(sum-1.0) > 1e-10 {
+			t.Errorf("Sum of composition = %v, want 1.0", sum)
+		}
+
+		// Проверяем панику при запросе отсутствующего компонента
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("C() should panic for missing component in non-empty composition")
+			}
+		}()
+		substance.C("D")
+	})
 
 	// Test getting parameters
 	t.Run("Get parameters", func(t *testing.T) {
@@ -250,8 +393,8 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 func TestSubstanceEmpty(t *testing.T) {
 	substance := Substance{
 		Name:       "Empty",
-		Parameters: make(map[string]float64),
-		Functions:  make(map[string]func(map[string]float64) float64),
+		Parameters: make(Parameters),
+		Functions:  make(Functions),
 	}
 
 	// Test P with empty parameters - should panic
@@ -273,93 +416,4 @@ func TestSubstanceEmpty(t *testing.T) {
 		}()
 		substance.F("anything")
 	})
-}
-
-// Бенчмарк получения параметров
-func BenchmarkSubstanceP(b *testing.B) {
-	params := make(map[string]float64)
-	for i := 0; i < 100; i++ {
-		name := string(rune('A' + i%26))
-		params[name] = float64(i)
-	}
-
-	substance := Substance{
-		Name:       "Benchmark",
-		Parameters: params,
-		Functions:  make(map[string]func(map[string]float64) float64),
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = substance.P("A")
-	}
-}
-
-// Бенчмарк получения и вызова функций
-func BenchmarkSubstanceF(b *testing.B) {
-	functions := make(map[string]func(map[string]float64) float64)
-	for i := 0; i < 20; i++ {
-		funcName := string(rune('A' + i%26))
-		functions[funcName] = func(p map[string]float64) float64 {
-			sum := 0.0
-			for _, v := range p {
-				sum += v
-			}
-			return sum
-		}
-	}
-
-	params := map[string]float64{
-		"a": 1.0,
-		"b": 2.0,
-		"c": 3.0,
-	}
-
-	substance := Substance{
-		Name:       "Benchmark",
-		Parameters: params,
-		Functions:  functions,
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		fn := substance.F("A")
-		_ = fn(params)
-	}
-}
-
-// Бенчмарк создания вещества
-func BenchmarkNewSubstance(b *testing.B) {
-	// Подготавливаем данные ДО цикла бенчмарка
-	params := make(map[string]float64, 100)
-	for j := 0; j < 100; j++ {
-		name := string(rune('A' + j%26))
-		params[name] = float64(j)
-	}
-
-	funcs := make(map[string]func(map[string]float64) float64, 20)
-	for j := 0; j < 20; j++ {
-		funcName := string(rune('A' + j%26))
-		// Внимание: захват переменной j в замыкании!
-		funcs[funcName] = func(p map[string]float64) float64 {
-			var sum float64
-			for _, v := range p {
-				sum += v
-			}
-			return sum
-		}
-	}
-
-	// Сбрасываем таймер перед началом замера
-	b.ResetTimer()
-
-	// Теперь замеряем только создание Substance
-	for i := 0; i < b.N; i++ {
-		substance := Substance{
-			Name:       "Complex",
-			Parameters: params,
-			Functions:  funcs,
-		}
-		_ = substance
-	}
 }
