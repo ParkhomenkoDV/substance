@@ -180,4 +180,14 @@ def test_young_modulus():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s", "-x"])
+    pytest.main(
+        [
+            __file__,
+            "-v",
+            "-s",
+            "-x",
+            "--benchmark-columns=mean,min,max,stddev,median,rounds,outliers",
+            "--benchmark-sort=name",
+            "--benchmark-min-rounds=10",
+        ]
+    )

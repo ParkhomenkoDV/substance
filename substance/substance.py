@@ -93,22 +93,29 @@ class Substance:
     def __validate_composition(self, composition: Dict[str, float]) -> Dict[str, float]:
         """Валидация смеси химического вещества"""
         for element, fraction in composition.items():
-            assert isinstance(element, str), TypeError("Composition elements must be strings")
-            assert isinstance(fraction, (int, float, np.number)), TypeError("Composition fractions must be numeric")
-            assert 0 < fraction <= 1, ValueError("Composition values must be in (0..1]")
+            if not isinstance(element, str):
+                raise TypeError("Composition elements must be strings")
+            if not isinstance(fraction, (int, float, np.number)):
+                raise TypeError("Composition fractions must be numeric")
+            if not (0 < fraction <= 1):
+                raise ValueError("Composition values must be in (0..1]")
         composition = self.normalize(composition)
         return composition
 
     def __validate_parameter(self, key: str, value: Union[int, float]) -> Union[int, float]:
         """Валидация параметров"""
-        assert isinstance(key, str), TypeError(f"{key} must be a str")
-        assert isinstance(value, (int, float, np.number)), TypeError(f"Parameter {key}={value} must be numeric")
+        if not isinstance(key, str):
+            raise TypeError(f"{key} must be a str")
+        if not isinstance(value, (int, float, np.number)):
+            raise TypeError(f"Parameter {key}={value} must be numeric")
         return value
 
     def __validate_function(self, key: str, value: callable) -> Callable:
         """Валидация функций"""
-        assert isinstance(key, str), TypeError(f"{key} must be a str")
-        assert callable(value), TypeError(f"Function {key} value must be callable")
+        if not isinstance(key, str):
+            raise TypeError(f"{key} must be a str")
+        if not callable(value):
+            raise TypeError(f"Function {key} value must be callable")
         return value
 
     def __setattr__(self, key: str, value) -> None:
