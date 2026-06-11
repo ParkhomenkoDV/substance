@@ -1,4 +1,8 @@
 from .hardness import Hardness
-from .substance import REFERENCES, Material, Substance, materials, mixing, young_modulus
+from .substance import Substance
 
-__all__ = [REFERENCES, Substance, Material, mixing, materials, young_modulus, Hardness]
+# import *
+__all__ = [
+    Hardness,
+    Substance,
+]
