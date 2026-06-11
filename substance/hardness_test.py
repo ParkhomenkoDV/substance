@@ -15,7 +15,7 @@ class TestHardness:
         for d in data:
             del d["d10mm"]  # лишняя инфа
             for key, value in d.items():
-                if isnan(value):
+                if value is None:
                     continue
                 obj = Hardness(**{key: value})
                 for k, v in obj.values.items():
