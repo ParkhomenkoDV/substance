@@ -1,4 +1,5 @@
 import json
+import os
 from math import nan
 from typing import Dict
 
@@ -10,7 +11,8 @@ from scipy.interpolate import interp1d
 2-е изд., исправл. и доп. / Зубченко А.С., Колосков М.М., Каширский Ю.В. и др. Под ред. А.С. Зубченко.
 М.: Машиностроение, 2003. 784 с.
 """
-with open("substance/hardness.json", "r") as file:
+HERE = os.path.dirname(__file__)
+with open(os.path.join(HERE, "hardness.json"), "r") as file:
     data = json.load(file)
 
 
