@@ -6,4 +6,4 @@ venv/
 *.lnk
 **/.DS_Store
 
-
+main.go
