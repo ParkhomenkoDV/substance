@@ -25,6 +25,7 @@ gte/
 |--- assets/images/  
 |--- substance/  
 |    |--- substance.py
+|    |--- hardness.py
 |--- .gitignore
 |--- README.md  
 |--- requirements.txt
