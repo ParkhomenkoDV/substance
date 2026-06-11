@@ -19,20 +19,20 @@ go get github.com/ParkhomenkoDV/substance
 
 ## Project structure
 ```
-gte/
+substance/
 |--- docs/ 
 |--- examples/  
 |--- assets/images/  
 |--- substance/  
 |    |--- substance.py
+|    |--- substance.go
 |    |--- hardness.py
+|    |--- hardness.go
 |--- .gitignore
 |--- README.md  
 |--- requirements.txt
 |--- setup.py
-|--- substance_bench_test.go
-|--- substance_test.go
-|--- substance.go
+
 ```
 
 # Benchmarks
@@ -57,10 +57,10 @@ test_substance_init                      1.4490 (37.91)     1.2079 (36.23)    42
 go test ./... -bench=. -benchmem -benchtime=1s -count=1
 goos: darwin
 goarch: arm64
-pkg: github.com/ParkhomenkoDV/substance
+pkg: github.com/ParkhomenkoDV/substance/substance
 cpu: Apple M4
-BenchmarkSubstanceC-10          226272747                5.249 ns/op           0 B/op          0 allocs/op
-BenchmarkSubstanceP-10          225694114                5.241 ns/op           0 B/op          0 allocs/op
-BenchmarkSubstanceF-10          32872771                36.12 ns/op            0 B/op          0 allocs/op
-BenchmarkNewSubstance-10        1000000000               0.2256 ns/op          0 B/op          0 allocs/op
+BenchmarkNewSubstance-10        1000000000               0.2374 ns/op          0 B/op          0 allocs/op
+BenchmarkSubstanceC-10          231635413                5.178 ns/op           0 B/op          0 allocs/op
+BenchmarkSubstanceP-10          229362783                5.177 ns/op           0 B/op          0 allocs/op
+BenchmarkSubstanceF-10          33703959                36.01 ns/op            0 B/op          0 allocs/op
 ```

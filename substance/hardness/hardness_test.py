@@ -4,7 +4,7 @@ from numpy import isnan
 try:
     from .hardness import Hardness, data
 except ImportError:
-    from hardness import Hardness, data
+    from substance.hardness.hardness import Hardness, data
 
 
 class TestHardness:

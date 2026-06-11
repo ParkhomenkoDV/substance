@@ -1,19 +1,20 @@
-package substance
+package hardness
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"sort"
 
 	"gonum.org/v1/gonum/interp"
 	"gonum.org/v1/gonum/stat"
 )
 
-// NewInterpolator создаёт новый интерполятор из данных
-// kind: тип интерполяции (1 - линейная, поддерживается PiecewiseLinear)
-func NewInterpolator(xData, yData []float64) (*interp.PiecewiseLinear, error) {
+// newInterpolator создаёт новый интерполятор из данных
+func newInterpolator(xData, yData []float64) (*interp.PiecewiseLinear, error) {
 	// Фильтруем NaN значения
 	filteredX, filteredY := make([]float64, 0), make([]float64, 0)
 	for i := range xData {
@@ -75,18 +76,16 @@ func (b byX) Swap(i, j int) {
 	b.ys[i], b.ys[j] = b.ys[j], b.ys[i]
 }
 
-// HardnessConverter конвертирует значения твёрдости
-type HardnessConverter struct {
+// hardnessConverter конвертирует значения твёрдости
+type hardnessConverter struct {
 	interpolators map[string]map[string]*interp.PiecewiseLinear
 }
 
-// NewHardnessConverter создаёт новый конвертер
-func NewHardnessConverter() (*HardnessConverter, error) {
-	hc := &HardnessConverter{
+// newHardnessConverter создаёт новый конвертер
+func newHardnessConverter() (*hardnessConverter, error) {
+	hc := &hardnessConverter{
 		interpolators: make(map[string]map[string]*interp.PiecewiseLinear),
 	}
-
-	scales := []string{"HB", "HRA", "HRC", "HRB", "HV", "HSD"}
 
 	// Создаём интерполяторы для всех комбинаций
 	for _, from := range scales {
@@ -106,7 +105,7 @@ func NewHardnessConverter() (*HardnessConverter, error) {
 	return hc, nil
 }
 
-func (hc *HardnessConverter) createInterpolator(from, to string) (*interp.PiecewiseLinear, error) {
+func (hc *hardnessConverter) createInterpolator(from, to string) (*interp.PiecewiseLinear, error) {
 	xData := make([]float64, len(data))
 	yData := make([]float64, len(data))
 
@@ -115,7 +114,7 @@ func (hc *HardnessConverter) createInterpolator(from, to string) (*interp.Piecew
 		yData[i] = getValue(d, to)
 	}
 
-	return NewInterpolator(xData, yData)
+	return newInterpolator(xData, yData)
 }
 
 // getValue возвращает значение поля по имени шкалы
@@ -139,7 +138,7 @@ func getValue(d hardness, scale string) float64 {
 }
 
 // Convert конвертирует значение из одной шкалы во все остальные
-func (hc *HardnessConverter) Convert(fromScale string, value float64) map[string]float64 {
+func (hc *hardnessConverter) Convert(fromScale string, value float64) map[string]float64 {
 	result := make(map[string]float64)
 
 	// Проверяем, существует ли шкала
@@ -156,6 +155,8 @@ func (hc *HardnessConverter) Convert(fromScale string, value float64) map[string
 	return result
 }
 
+var scales = []string{"HB", "HRA", "HRC", "HRB", "HV", "HSD"}
+
 // Твердость.
 type hardness struct {
 	d10 float64
@@ -171,29 +172,40 @@ func (h hardness) String() string {
 	return fmt.Sprintf("HB: %.1f, HRA: %.1f, HRC: %.1f, HRB: %.1f HV: %.1f, HSD: %.1f", h.HB, h.HRA, h.HRC, h.HRB, h.HV, h.HSD)
 }
 
-var data []hardness
+//go:embed hardness.json
+var embeddedJSON []byte
+
+var (
+	data      []hardness
+	converter *hardnessConverter
+)
 
 func init() {
-	bytes, err := os.ReadFile("substance/hardness.json")
+	var err error
+
+	embeddedJSON, err = os.ReadFile("substance/hardness/hardness.json")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	if err = json.Unmarshal(embeddedJSON, &data); err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	if err := json.Unmarshal(bytes, &data); err != nil {
+	converter, err = newHardnessConverter()
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
 }
 
 func Hardness(scale string, value float64) (hardness, error) {
-	converter, err := NewHardnessConverter()
-	if err != nil {
-		return hardness{}, err
+	if !slices.Contains(scales, scale) {
+		return hardness{}, fmt.Errorf("scale: %v not found!", scale)
 	}
 
 	converted := converter.Convert(scale, value)
-
 	return hardness{
 		HB:  converted["HB"],
 		HRA: converted["HRA"],
