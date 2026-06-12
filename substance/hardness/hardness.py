@@ -83,9 +83,9 @@ class Hardness:
         """Валидирование твердости"""
         if len(hardness) != 1:
             raise ValueError(f"{len(hardness)=} must be 1")
-        for k, v in hardness.items():
-            if k not in cls.__slots__:
-                raise KeyError(f"{hardness=} not in {cls.__slots__}")
+        for scale, v in hardness.items():
+            if scale not in cls.__slots__:
+                raise KeyError(f"{scale=} not in {cls.__slots__}")
             if not isinstance(v, (float, int)):
                 raise TypeError(f"{type(v)=} must be float")
 
