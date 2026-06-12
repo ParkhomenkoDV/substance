@@ -128,6 +128,19 @@ class Substance:
 
         return new_obj
 
+    def __eq__(self, other, eps: float) -> bool:
+        if len(self.Parameters) != len(other.Parameters):
+            return False
+
+        for parameter, value in self.Parameters.items():
+            v = other.Parameters.get(parameter)
+            if v is None:
+                return False
+            if abs(v - value) > eps * value:
+                return False
+
+        return True
+
     @property
     def humidity(self) -> float:
         """Влажность"""

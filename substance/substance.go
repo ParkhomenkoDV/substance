@@ -1,6 +1,9 @@
 package substance
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 const (
 	errCompositionNotFound = "Substance '%s': Composition '%s' not found"
@@ -43,6 +46,22 @@ func (s *Substance) String() (str string) {
 		str += fmt.Sprintf("\t%v: %v\n", k, v)
 	}
 	return str
+}
+
+func (s *Substance) Eq(other Substance, eps float64) bool {
+	if len(s.Parameters) != len(other.Parameters) {
+		return false
+	}
+	for parameter, value := range s.Parameters {
+		v, ok := other.Parameters[parameter]
+		if !ok {
+			return false
+		}
+		if math.Abs(v-value) > eps*value {
+			return false
+		}
+	}
+	return true
 }
 
 // Получение химического состава по имени.
