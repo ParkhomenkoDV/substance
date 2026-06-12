@@ -22,7 +22,6 @@ func BenchmarkNewSubstance(b *testing.B) {
 			}
 			return sum
 		}
-
 	}
 
 	b.ResetTimer()
