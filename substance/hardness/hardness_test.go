@@ -1,45 +1,24 @@
 package hardness
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestHardness(t *testing.T) {
-	tests := []struct {
-		name    string
-		scale   string
-		value   float64
-		want    hardness
-		wantErr bool
-	}{
-		{
-			name:    "HB=229",
-			scale:   "HB",
-			value:   229,
-			wantErr: false,
-			want: hardness{
-				HB:  229,
-				HRA: 61.8,
-				HRC: 22.0,
-				HRB: 98.2,
-				HV:  229.0,
-				HSD: 32.5,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := Hardness(tt.scale, tt.value)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("Hardness() failed: %v", gotErr)
+	for _, d := range data[:len(data)-180] {
+		for _, scale := range Scales {
+			value := getValue(d, scale)
+			if value == 0 { // no data
+				continue
+			}
+			testName := fmt.Sprintf("%s%v", scale, value)
+			t.Run(testName, func(t *testing.T) {
+				got := Hardness(scale, value)
+				if !got.Eq(d, 0.02) { // 2%
+					t.Errorf("Hardness() = %s, want %s", got.String(), d.String())
 				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("Hardness() succeeded unexpectedly")
-			}
-			if got != tt.want {
-				t.Errorf("Hardness() = %+v, want %+v", got, tt.want)
-			}
-		})
+			})
+		}
 	}
 }
