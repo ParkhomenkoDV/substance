@@ -128,7 +128,7 @@ class Substance:
 
         return new_obj
 
-    def __eq__(self, other, eps: float) -> bool:
+    def eq(self, other, eps: float) -> bool:
         if len(self.Parameters) != len(other.Parameters):
             return False
 
