@@ -15,12 +15,15 @@ func BenchmarkNewSubstance(b *testing.B) {
 	for j := 0; j < 20; j++ {
 		funcName := string(rune('A' + j%26))
 		// Внимание: захват переменной j в замыкании!
-		funcs[funcName] = func(ps Parameters) float64 {
-			var sum float64
-			for _, v := range ps {
-				sum += v
-			}
-			return sum
+		funcs[funcName] = Function{
+			Name: funcName,
+			Func: func(ps Parameters) float64 {
+				var sum float64
+				for _, v := range ps {
+					sum += v
+				}
+				return sum
+			},
 		}
 	}
 
@@ -94,12 +97,16 @@ func BenchmarkSubstanceF(b *testing.B) {
 	functions := make(Functions)
 	for i := 0; i < 20; i++ {
 		funcName := string(rune('A' + i%26))
-		functions[funcName] = func(ps Parameters) float64 {
-			sum := 0.0
-			for _, v := range ps {
-				sum += v
-			}
-			return sum
+		functions[funcName] = Function{
+			Name: funcName,
+			Func: func(ps Parameters) float64 {
+				sum := 0.0
+				for _, v := range ps {
+					sum += v
+				}
+				return sum
+			},
+			Args: NewFuncArgs("a", "b", "c"),
 		}
 	}
 
@@ -112,6 +119,6 @@ func BenchmarkSubstanceF(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		fn := substance.F("A")
-		_ = fn(params)
+		_ = fn.Call(params)
 	}
 }

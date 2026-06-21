@@ -16,14 +16,23 @@ func TestInit(t *testing.T) {
 				"p":  101_325,
 			},
 			Functions: Functions{
-				"gc": func(p Parameters) Parameter {
-					return 287.3
+				"gc": Function{
+					Name: "gc",
+					Func: func(p Parameters) Parameter {
+						return 287.3
+					},
+					Args: NewFuncArgs("t"),
 				},
-
-				"hcp": func(ps Parameters) float64 { return ps["t"] + 3 },
+				"hcp": Function{
+					Name: "hcp",
+					Func: func(ps Parameters) float64 {
+						return ps["t"] + 3
+					},
+					Args: NewFuncArgs("t"),
+				},
 			},
 		}
-		enthalpy := s.Functions["hcp"](Parameters{"t": 500}) * s.P("m") * s.P("t")
+		enthalpy := s.Functions["hcp"].Call(Parameters{"t": 500}) * s.P("m") * s.P("t")
 		if enthalpy != 7_545_000 {
 			t.Errorf("got: %v, want: %v", enthalpy, 7_545_000)
 		}
@@ -163,18 +172,26 @@ func TestSubstanceP(t *testing.T) {
 func TestSubstanceF(t *testing.T) {
 	// Test functions
 	functions := Functions{
-		"double": func(ps Parameters) float64 {
-			if val, ok := ps["value"]; ok {
-				return val * 2
-			}
-			return 0
+		"double": Function{
+			Name: "double",
+			Func: func(ps Parameters) float64 {
+				if val, ok := ps["value"]; ok {
+					return val * 2
+				}
+				return 0
+			},
+			Args: NewFuncArgs("value"),
 		},
 
-		"square": func(ps Parameters) float64 {
-			if val, ok := ps["value"]; ok {
-				return val * val
-			}
-			return 0
+		"square": Function{
+			Name: "squarre",
+			Func: func(ps Parameters) float64 {
+				if val, ok := ps["value"]; ok {
+					return val * val
+				}
+				return 0
+			},
+			Args: NewFuncArgs("value"),
 		},
 	}
 
@@ -230,7 +247,7 @@ func TestSubstanceF(t *testing.T) {
 				params := map[string]float64{
 					"value": test.testValue,
 				}
-				result := got(params)
+				result := got.Call(params)
 				if math.Abs(result-test.wantResult) > 1e-10 {
 					t.Errorf("Function result = %v, want %v", result, test.wantResult)
 				}
@@ -256,18 +273,30 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 	}
 
 	functions := Functions{
-		"volume": func(ps Parameters) float64 {
-			return ps["length"] * ps["width"] * ps["height"]
+		"volume": Function{
+			Name: "volume",
+			Func: func(ps Parameters) float64 {
+				return ps["length"] * ps["width"] * ps["height"]
+			},
+			Args: NewFuncArgs("length", "width", "height"),
 		},
-		"density": func(ps Parameters) float64 {
-			volume := ps["length"] * ps["width"] * ps["height"]
-			if volume == 0 {
-				return 0
-			}
-			return ps["mass"] / volume
+		"density": Function{
+			Name: "density",
+			Func: func(ps Parameters) float64 {
+				volume := ps["length"] * ps["width"] * ps["height"]
+				if volume == 0 {
+					return 0
+				}
+				return ps["mass"] / volume
+			},
+			Args: NewFuncArgs("length", "width", "height", "mass"),
 		},
-		"speed": func(ps Parameters) float64 {
-			return ps["length"] / ps["time"]
+		"speed": Function{
+			Name: "speed",
+			Func: func(ps Parameters) float64 {
+				return ps["length"] / ps["time"]
+			},
+			Args: NewFuncArgs("length", "time"),
 		},
 	}
 
@@ -325,10 +354,7 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 	// Test functions
 	t.Run("Volume function", func(t *testing.T) {
 		volume := substance.F("volume")
-		if volume == nil {
-			t.Fatal("volume function not found")
-		}
-		result := volume(substance.Parameters)
+		result := volume.Call(substance.Parameters)
 		expected := 5.0 * 3.0 * 2.0 // 30.0
 		if math.Abs(result-expected) > 1e-10 {
 			t.Errorf("volume = %v, want %v", result, expected)
@@ -337,10 +363,7 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 
 	t.Run("Density function", func(t *testing.T) {
 		density := substance.F("density")
-		if density == nil {
-			t.Fatal("density function not found")
-		}
-		result := density(substance.Parameters)
+		result := density.Call(substance.Parameters)
 		expected := 10.0 / (5.0 * 3.0 * 2.0) // 0.33333...
 		if math.Abs(result-expected) > 1e-10 {
 			t.Errorf("density = %v, want %v", result, expected)
@@ -349,10 +372,7 @@ func TestSubstanceWithMultipleParameters(t *testing.T) {
 
 	t.Run("Speed function", func(t *testing.T) {
 		speed := substance.F("speed")
-		if speed == nil {
-			t.Fatal("speed function not found")
-		}
-		result := speed(substance.Parameters)
+		result := speed.Call(substance.Parameters)
 		expected := 5.0 / 60.0 // 0.08333...
 		if math.Abs(result-expected) > 1e-10 {
 			t.Errorf("speed = %v, want %v", result, expected)
