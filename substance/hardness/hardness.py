@@ -1,7 +1,6 @@
 import json
 import os
 from math import nan
-from typing import Dict
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -79,7 +78,7 @@ class Hardness:
     HSD_HV = interpolate("HSD", "HV", kind=1)
 
     @classmethod
-    def validate(cls, **hardness: Dict[str, float]):
+    def validate(cls, **hardness: dict[str, float]):
         """Валидирование твердости"""
         if len(hardness) != 1:
             raise ValueError(f"{len(hardness)=} must be 1")
@@ -89,18 +88,18 @@ class Hardness:
             if not isinstance(v, (float, int)):
                 raise TypeError(f"{type(v)=} must be float")
 
-    def __init__(self, **hardness: Dict[str, float]):
+    def __init__(self, **hardness: dict[str, float]):
         Hardness.validate(**hardness)
         converted = Hardness.convert(**hardness)
         for k, v in converted.items():
             setattr(self, k, v)
 
     @property
-    def values(self) -> Dict[str, float]:
+    def values(self) -> dict[str, float]:
         return {k: getattr(self, k, nan) for k in self.__slots__}
 
     @classmethod
-    def convert(cls, **hardness: Dict[str, float]) -> Dict[str, float]:
+    def convert(cls, **hardness: dict[str, float]) -> dict[str, float]:
         cls.validate(**hardness)
         for k, v in hardness.items():
             match k:

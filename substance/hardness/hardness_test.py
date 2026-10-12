@@ -1,5 +1,6 @@
+from math import isnan
+
 import pytest
-from numpy import isnan
 
 try:
     from .hardness import Hardness, data
